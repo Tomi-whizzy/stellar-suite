@@ -8,7 +8,7 @@ import { SidebarViewProvider } from '../ui/sidebarView';
 import { parseFunctionArgs } from '../utils/jsonParser';
 import { formatError } from '../utils/errorFormatter';
 
-export async function simulateTransaction(context: vscode.ExtensionContext, sidebarProvider?: SidebarViewProvider) {
+export async function simulateTransaction(context: vscode.ExtensionContext, sidebarProvider?: SidebarViewProvider, args?: any) {
     try {
         const config = vscode.workspace.getConfiguration('stellarSuite');
         const useLocalCli = config.get<boolean>('useLocalCli', true);
@@ -16,34 +16,46 @@ export async function simulateTransaction(context: vscode.ExtensionContext, side
         const source = config.get<string>('source', 'dev');
         const network = config.get<string>('network', 'testnet') || 'testnet';
         const rpcUrl = config.get<string>('rpcUrl', 'https://soroban-testnet.stellar.org:443');
+        const networkPassphrase = config.get<string>('networkPassphrase', 'Test SDF Network ; September 2015');
         
+        const selectedContractId = args?.contractId || context.workspaceState.get<string>('selectedContractId');
         const lastContractId = context.workspaceState.get<string>('lastContractId');
 
-        let defaultContractId = lastContractId || '';
-        try {
-            if (!defaultContractId) {
-                const detectedId = await WorkspaceDetector.findContractId();
-                if (detectedId) {
-                    defaultContractId = detectedId;
-                }
-            }
-        } catch (error) {
-        }
+        let contractId: string | undefined = selectedContractId;
+        const passedFunctionName = args?.functionName;
 
-        const contractId = await vscode.window.showInputBox({
-            prompt: 'Enter the contract ID (address)',
-            placeHolder: defaultContractId || 'e.g., C...',
-            value: defaultContractId,
-            validateInput: (value: string) => {
-                if (!value || value.trim().length === 0) {
-                    return 'Contract ID is required';
+        if (args?.contractId) {
+            // Use directly
+        } else if (selectedContractId) {
+            // Clear it so manual command palette invocation doesn't use it
+            await context.workspaceState.update('selectedContractId', undefined);
+        } else {
+            let defaultContractId = lastContractId || '';
+            try {
+                if (!defaultContractId) {
+                    const detectedId = await WorkspaceDetector.findContractId();
+                    if (detectedId) {
+                        defaultContractId = detectedId;
+                    }
                 }
-                if (!value.match(/^C[A-Z0-9]{55}$/)) {
-                    return 'Invalid contract ID format (should start with C and be 56 characters)';
-                }
-                return null;
+            } catch (error) {
             }
-        });
+
+            contractId = await vscode.window.showInputBox({
+                prompt: 'Enter the contract ID (address)',
+                placeHolder: defaultContractId || 'e.g., C...',
+                value: defaultContractId,
+                validateInput: (value: string) => {
+                    if (!value || value.trim().length === 0) {
+                        return 'Contract ID is required';
+                    }
+                    if (!value.match(/^C[A-Z0-9]{55}$/)) {
+                        return 'Invalid contract ID format (should start with C and be 56 characters)';
+                    }
+                    return null;
+                }
+            });
+        }
 
         if (!contractId) {
             return;
@@ -51,60 +63,65 @@ export async function simulateTransaction(context: vscode.ExtensionContext, side
 
         let contractFunctions: ContractFunction[] = [];
         let selectedFunction: ContractFunction | null = null;
-        let functionName = '';
+        let functionName = passedFunctionName || '';
 
-        if (useLocalCli) {
-            const inspector = new ContractInspector(cliPath, source);
-            try {
-                contractFunctions = await inspector.getContractFunctions(contractId);
-            } catch (error) {
-            }
-        }
-
-        if (contractFunctions.length > 0) {
-            const functionItems = contractFunctions.map(fn => ({
-                label: fn.name,
-                description: fn.description || '',
-                detail: fn.parameters.length > 0 
-                    ? `Parameters: ${fn.parameters.map(p => p.name).join(', ')}`
-                    : 'No parameters'
-            }));
-
-            const selected = await vscode.window.showQuickPick(functionItems, {
-                placeHolder: 'Select a function to invoke'
-            });
-
-            if (!selected) {
-                return;
-            }
-
-            selectedFunction = contractFunctions.find(f => f.name === selected.label) || null;
-            functionName = selected.label;
-        } else {
-            const input = await vscode.window.showInputBox({
-                prompt: 'Enter the function name to call',
-                placeHolder: 'e.g., hello',
-                validateInput: (value: string) => {
-                    if (!value || value.trim().length === 0) {
-                        return 'Function name is required';
-                    }
-                    return null;
-                }
-            });
-
-            if (!input) {
-                return;
-            }
-
-            functionName = input;
-
+        if (!functionName) {
             if (useLocalCli) {
-                const inspector = new ContractInspector(cliPath, source);
-                selectedFunction = await inspector.getFunctionHelp(contractId, functionName);
+                const inspector = new ContractInspector(cliPath, source, network, rpcUrl, networkPassphrase);
+                try {
+                    contractFunctions = await inspector.getContractFunctions(contractId);
+                } catch (error) {
+                }
             }
+
+            if (contractFunctions.length > 0) {
+                const functionItems = contractFunctions.map(fn => ({
+                    label: fn.name,
+                    description: fn.description || '',
+                    detail: fn.parameters.length > 0 
+                        ? `Parameters: ${fn.parameters.map(p => p.name).join(', ')}`
+                        : 'No parameters'
+                }));
+
+                const selected = await vscode.window.showQuickPick(functionItems, {
+                    placeHolder: 'Select a function to invoke'
+                });
+
+                if (!selected) {
+                    return;
+                }
+
+                selectedFunction = contractFunctions.find(f => f.name === selected.label) || null;
+                functionName = selected.label;
+            } else {
+                const input = await vscode.window.showInputBox({
+                    prompt: 'Enter the function name to call',
+                    placeHolder: 'e.g., hello',
+                    validateInput: (value: string) => {
+                        if (!value || value.trim().length === 0) {
+                            return 'Function name is required';
+                        }
+                        return null;
+                    }
+                });
+
+                if (!input) {
+                    return;
+                }
+
+                functionName = input;
+
+                if (useLocalCli) {
+                    const inspector = new ContractInspector(cliPath, source, network, rpcUrl, networkPassphrase);
+                    selectedFunction = await inspector.getFunctionHelp(contractId, functionName);
+                }
+            }
+        } else if (useLocalCli) {
+            const inspector = new ContractInspector(cliPath, source, network, rpcUrl, networkPassphrase);
+            selectedFunction = await inspector.getFunctionHelp(contractId, functionName);
         }
 
-        let args: any[] = [];
+        let txArgs: any[] = [];
         
         if (selectedFunction && selectedFunction.parameters.length > 0) {
             const argsObj: any = {};
@@ -135,10 +152,12 @@ export async function simulateTransaction(context: vscode.ExtensionContext, side
                 }
             }
 
-            args = [argsObj];
+            txArgs = [argsObj];
         } else {
+            // We have a function name but no metadata (or no parameters found)
+            // Prompt for JSON arguments as a fallback
             const argsInput = await vscode.window.showInputBox({
-                prompt: 'Enter function arguments as JSON object (e.g., {"name": "value"})',
+                prompt: `Enter arguments for "${functionName}" as JSON object (e.g., {"name": "value"})`,
                 placeHolder: 'e.g., {"name": "world"}',
                 value: '{}'
             });
@@ -150,23 +169,24 @@ export async function simulateTransaction(context: vscode.ExtensionContext, side
             try {
                 const parsed = JSON.parse(argsInput || '{}');
                 if (typeof parsed === 'object' && !Array.isArray(parsed) && parsed !== null) {
-                    args = [parsed];
+                    txArgs = [parsed];
                 } else {
                     vscode.window.showErrorMessage('Arguments must be a JSON object');
                     return;
                 }
             } catch (error) {
-                vscode.window.showErrorMessage(`Invalid JSON: ${error instanceof Error ? error.message : 'Unknown error'}`);
-                return;
+                vscode.window.showErrorMessage(`Invalid JSON: ${error instanceof Error ? error.message : 'Unknown error'}. Using empty arguments.`);
+                txArgs = [{}];
             }
         }
+
 
         const panel = SimulationPanel.createOrShow(context);
         panel.updateResults(
             { success: false, error: 'Running simulation...' },
             contractId,
             functionName,
-            args
+            txArgs
         );
 
         await vscode.window.withProgress(
@@ -184,7 +204,7 @@ export async function simulateTransaction(context: vscode.ExtensionContext, side
                     progress.report({ increment: 30, message: 'Using Stellar CLI...' });
                     
                     let actualCliPath = cliPath;
-                    let cliService = new SorobanCliService(actualCliPath, source);
+                    let cliService = new SorobanCliService(actualCliPath, source, rpcUrl, networkPassphrase);
                     
                     let cliAvailable = await cliService.isAvailable();
                     
@@ -193,7 +213,7 @@ export async function simulateTransaction(context: vscode.ExtensionContext, side
                         const foundPath = await SorobanCliService.findCliPath();
                         if (foundPath) {
                             actualCliPath = foundPath;
-                            cliService = new SorobanCliService(actualCliPath, source);
+                            cliService = new SorobanCliService(actualCliPath, source, rpcUrl, networkPassphrase);
                             cliAvailable = await cliService.isAvailable();
                         }
                     }
@@ -209,30 +229,50 @@ export async function simulateTransaction(context: vscode.ExtensionContext, side
                             error: `Stellar CLI not found at "${cliPath}".${suggestion}`
                         };
                     } else {
-                        progress.report({ increment: 50, message: 'Executing simulation...' });
-                        result = await cliService.simulateTransaction(contractId, functionName, args, network);
+                        progress.report({ increment: 40, message: 'Building transaction XDR...' });
+                        try {
+                            const txXdr = await cliService.buildTransaction(contractId, functionName, txArgs, network);
+                            
+                            progress.report({ increment: 60, message: 'Fetching rich simulation data from RPC...' });
+                            const rpcService = new RpcService(rpcUrl);
+                            const rpcResult = await rpcService.simulateTransactionFromXdr(txXdr);
+                            
+                            progress.report({ increment: 80, message: 'Executing local simulation for return value...' });
+                            const cliResult = await cliService.simulateTransaction(contractId, functionName, txArgs, network);
+                            
+                            if (cliResult.success) {
+                                // Combine the rich RPC data (Events, Auth, minResourceFee) with the beautifully formatted CLI return value
+                                result = {
+                                    ...rpcResult,
+                                    success: true,
+                                    result: cliResult.result
+                                };
+                            } else {
+                                // If CLI execution failed, return the CLI error
+                                result = cliResult;
+                            }
+                        } catch (e: any) {
+                            result = {
+                                success: false,
+                                error: e.message || String(e)
+                            };
+                        }
                         
                         if (sidebarProvider) {
-                            const argsStr = args.length > 0 ? JSON.stringify(args) : '';
+                            const argsStr = txArgs.length > 0 ? JSON.stringify(txArgs) : '';
                             sidebarProvider.addCliHistoryEntry('stellar contract invoke', ['--id', contractId, '--source', source, '--network', network, '--', functionName, argsStr].filter(Boolean));
                         }
                     }
                 } else {
-                    progress.report({ increment: 30, message: 'Connecting to RPC...' });
-                    const rpcService = new RpcService(rpcUrl);
-                    
-                    progress.report({ increment: 50, message: 'Executing simulation...' });
-                    result = await rpcService.simulateTransaction(contractId, functionName, args);
-                    
-                    if (sidebarProvider) {
-                        const argsStr = args.length > 0 ? JSON.stringify(args[0]) : '';
-                        sidebarProvider.addCliHistoryEntry('RPC simulateTransaction', [contractId, functionName, argsStr].filter(Boolean));
-                    }
+                    result = {
+                        success: false,
+                        error: 'Simulation without Stellar CLI is not supported. Please enable useLocalCli in settings.'
+                    };
                 }
 
                 progress.report({ increment: 100, message: 'Complete' });
 
-                panel.updateResults(result, contractId, functionName, args);
+                panel.updateResults(result, contractId, functionName, txArgs);
 
                 if (sidebarProvider) {
                     sidebarProvider.showSimulationResult(contractId, result);

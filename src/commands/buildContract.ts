@@ -5,10 +5,25 @@ import { formatError } from '../utils/errorFormatter';
 import { SidebarViewProvider } from '../ui/sidebarView';
 import { getSharedOutputChannel, showSharedOutputChannel } from '../utils/outputChannel';
 
-export async function buildContract(context: vscode.ExtensionContext, sidebarProvider?: SidebarViewProvider) {
+export async function buildContract(context: vscode.ExtensionContext, sidebarProvider?: SidebarViewProvider, args?: any) {
     try {
         const config = vscode.workspace.getConfiguration('stellarSuite');
         const cliPath = config.get<string>('cliPath', 'stellar');
+        
+        let optimize = args?.optimize;
+        
+        if (optimize === undefined) {
+            const buildType = await vscode.window.showQuickPick(
+                [
+                    { label: 'Standard Build', description: 'Faster, larger WASM', value: false },
+                    { label: 'Optimized Build', description: 'Production-ready, smaller WASM', value: true }
+                ],
+                { placeHolder: 'Select build type' }
+            );
+            
+            if (!buildType) return;
+            optimize = buildType.value;
+        }
 
         const outputChannel = getSharedOutputChannel();
         showSharedOutputChannel();
@@ -26,8 +41,12 @@ export async function buildContract(context: vscode.ExtensionContext, sidebarPro
                 progress.report({ increment: 0, message: 'Detecting contract...' });
 
                 let contractDir: string | null = null;
+                const pathArg = args?.contractPath;
 
-                if (selectedContractPath) {
+                if (pathArg) {
+                    contractDir = pathArg;
+                    outputChannel.appendLine(`Using provided contract directory: ${contractDir}`);
+                } else if (selectedContractPath) {
                     const fs = require('fs');
                     if (fs.existsSync(selectedContractPath)) {
                         const stats = fs.statSync(selectedContractPath);
@@ -77,7 +96,7 @@ export async function buildContract(context: vscode.ExtensionContext, sidebarPro
                 outputChannel.appendLine('Running: stellar contract build\n');
 
                 const deployer = new ContractDeployer(cliPath, 'dev', 'testnet');
-                const buildResult = await deployer.buildContract(contractDir);
+                const buildResult = await deployer.buildContract(contractDir, optimize);
                 
                 if (sidebarProvider) {
                     sidebarProvider.addCliHistoryEntry('stellar contract build', [contractDir]);

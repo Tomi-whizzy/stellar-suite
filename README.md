@@ -6,7 +6,7 @@
 
 - **Extension:** [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=0xVida.stellar-kit-studio) · **Manage:** [Publisher Hub](https://marketplace.visualstudio.com/manage/publishers/0xVida/extensions/stellar-kit/hub)
 
-**Kit Studio** is a developer toolkit for building, deploying, and managing smart contracts on the Stellar network—directly from your editor. Build, deploy, and simulate Soroban contracts from VS Code without jumping between the terminal and the editor: the Stellar CLI is wired into a sidebar and commands so you can stay in the flow.
+**Kit Studio** is a developer toolkit for building, deploying, and managing smart contracts on the Stellar network — directly from your editor. Build, deploy, and simulate Soroban contracts from VS Code without jumping between the terminal and the editor: the Stellar CLI is wired into a sidebar and commanded s so you can stay in the flow.
 
 ---
 
@@ -44,48 +44,19 @@ Install **Kit Studio** from the [VS Code Marketplace](https://marketplace.visual
 
 **Simulate:** Command Palette → **Stellar Kit: Simulate Soroban Transaction**. Enter contract ID, function, and arguments; results show in a panel with return values and resource usage.
 
-**Configure CLI:** **Stellar Kit: Configure CLI** lets you manage profiles, validate network/source/RPC settings, and export/import config as JSON.
-
 ---
 
 ### Using the Sidebar
 
-The Stellar Kit sidebar provides a visual interface for
-managing contracts:
+The Stellar Kit sidebar provides a visual interface for managing contracts:
 
 - View all detected contracts in your workspace
 - See build status at a glance
-- See detected contract template/category (token, escrow, 
-voting, custom, unknown)
+- View previously deployed contracts
 - Access quick actions (Build, Deploy, Simulate)
-- Run template-specific actions from the contract card/
-context menu
-- Manually assign template categories from the context menu
-- View deployment history
-- Inspect contract functions
-
-
-You can define templates so the sidebar can categorize and offer actions for your contract types. In the workspace root, add `stellar-suite.templates.json` (or `.stellar-suite/templates.json`):
-
-```json
-{
-  "version": "1",
-  "templates": [
-    {
-      "id": "amm",
-      "displayName": "AMM",
-      "category": "amm",
-      "keywords": ["swap", "liquidity_pool"],
-      "dependencies": ["soroban-sdk"],
-      "actions": [
-        { "id": "amm.swap", "label": "Swap Assets" }
-      ]
-    }
-  ]
-}
-```
-
-Contracts that don’t match a template show as “Unknown” until they match or you assign a category from the sidebar context menu.
+- Manage CLI identities and networks
+- Generate TypeScript bindings for contracts
+- View execution history
 
 ---
 

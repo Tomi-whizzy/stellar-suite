@@ -46,13 +46,18 @@ export class ContractDeployer {
         this.network = network;
     }
 
-    async buildContract(contractPath: string): Promise<{ success: boolean; output: string; wasmPath?: string }> {
+    async buildContract(contractPath: string, optimize: boolean = false): Promise<{ success: boolean; output: string; wasmPath?: string }> {
         try {
             const env = getEnvironmentWithPath();
             
+            const buildArgs = ['contract', 'build'];
+            if (optimize) {
+                buildArgs.push('--optimize');
+            }
+
             const { stdout, stderr } = await execFileAsync(
                 this.cliPath,
-                ['contract', 'build'],
+                buildArgs,
                 {
                     cwd: contractPath,
                     env: env,
@@ -178,8 +183,8 @@ export class ContractDeployer {
         }
     }
 
-    async buildAndDeploy(contractPath: string): Promise<DeploymentResult> {
-        const buildResult = await this.buildContract(contractPath);
+    async buildAndDeploy(contractPath: string, optimize: boolean = false): Promise<DeploymentResult> {
+        const buildResult = await this.buildContract(contractPath, optimize);
         
         if (!buildResult.success) {
             return {

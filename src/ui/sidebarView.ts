@@ -2,12 +2,12 @@ import * as vscode from 'vscode';
 import { SidebarWebView } from './sidebarWebView';
 import { WasmDetector } from '../utils/wasmDetector';
 import { ContractInspector, ContractFunction } from '../services/contractInspector';
+import { SorobanCliService } from '../services/sorobanCliService';
 
 export interface ContractInfo {
     name: string;
     path: string;
     contractId?: string;
-    functions?: ContractFunction[];
     hasWasm: boolean;
     lastDeployed?: string;
 }
@@ -15,6 +15,7 @@ export interface ContractInfo {
 export interface DeploymentRecord {
     contractId: string;
     contractName: string;
+    contractPath?: string;
     deployedAt: string;
     network: string;
     source: string;
@@ -29,8 +30,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
-        context: vscode.ExtensionContext,
-        private readonly groupService?: any // Use any for now or import ContractGroupService
+        context: vscode.ExtensionContext
     ) {
         this._context = context;
     }
@@ -51,7 +51,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
 
         this._webView = new SidebarWebView(webviewView.webview, this._extensionUri);
         this._webView.updateContent([], []);
-        
+
         this.refresh();
 
         webviewView.webview.onDidReceiveMessage(
@@ -77,11 +77,35 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
                             if (message.contractId) {
                                 this._context.workspaceState.update('selectedContractId', message.contractId);
                             }
-                            await vscode.commands.executeCommand('stellarSuite.simulateTransaction');
+                            await vscode.commands.executeCommand('stellarSuite.simulateTransaction', {
+                                contractId: message.contractId,
+                                functionName: message.functionName
+                            });
                             break;
-                        case 'inspectContract':
-                            await this.inspectContract(message.contractId);
+                        case 'runInvoke':
+                            if (message.contractId) {
+                                this._context.workspaceState.update('selectedContractId', message.contractId);
+                            }
+                            await vscode.commands.executeCommand('stellarSuite.runInvoke', {
+                                contractId: message.contractId,
+                                functionName: message.functionName
+                            });
                             break;
+                        case 'copyToClipboard':
+                            if (message.text) {
+                                await vscode.env.clipboard.writeText(message.text);
+                                vscode.window.showInformationMessage(`Copied to clipboard: ${message.text.substring(0, 12)}...`);
+                            }
+                            break;
+                        case 'contractInfo':
+                            if (message.contractId) {
+                                this._context.workspaceState.update('selectedContractId', message.contractId);
+                            }
+                            await vscode.commands.executeCommand('stellarSuite.contractInfo', {
+                                contractId: message.contractId
+                            });
+                            break;
+
                         case 'getCliHistory':
                             const history = this.getCliHistory();
                             webviewView.webview.postMessage({
@@ -91,6 +115,18 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
                             break;
                         case 'clearDeployments':
                             await this.clearDeployments();
+                            break;
+                        case 'installCli':
+                            await vscode.commands.executeCommand('stellarSuite.installCli');
+                            break;
+                        case 'execute':
+                            if (message.executeCommand) {
+                                if (message.args) {
+                                    await vscode.commands.executeCommand(message.executeCommand, message.args);
+                                } else {
+                                    await vscode.commands.executeCommand(message.executeCommand);
+                                }
+                            }
                             break;
                     }
                 } catch (error) {
@@ -110,20 +146,21 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
 
         const contracts = await this.getContracts();
         const deployments = this.getDeployments();
-        this._webView.updateContent(contracts, deployments);
+        const isCliInstalled = !!(await SorobanCliService.findCliPath());
+        this._webView.updateContent(contracts, deployments, isCliInstalled);
     }
 
     private async getContracts(): Promise<ContractInfo[]> {
         const contracts: ContractInfo[] = [];
 
         const contractDirs = await WasmDetector.findContractDirectories();
-        
+
         for (const dir of contractDirs) {
             const contractName = require('path').basename(dir);
             const wasmPath = WasmDetector.getExpectedWasmPath(dir);
             const fs = require('fs');
             const hasWasm = wasmPath && fs.existsSync(wasmPath);
-            
+
             let contractId: string | undefined;
             let functions: ContractFunction[] | undefined;
             const deploymentHistory = this._context.workspaceState.get<DeploymentRecord[]>(
@@ -135,31 +172,20 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
                     'stellarSuite.deployedContracts',
                     {}
                 );
-                return deployedContracts[dir] === d.contractId;
+                // Use absolute path as key for lookup
+                return deployedContracts[dir] === d.contractId || d.contractPath === dir;
             });
-            
+
             if (lastDeployment) {
                 contractId = lastDeployment.contractId;
             }
 
-            if (contractId) {
-                const config = vscode.workspace.getConfiguration('stellarSuite');
-                const cliPath = config.get<string>('cliPath', 'stellar');
-                const source = config.get<string>('source', 'dev');
-                const network = config.get<string>('network', 'testnet') || 'testnet';
-                const inspector = new ContractInspector(cliPath, source, network);
-                try {
-                    functions = await inspector.getContractFunctions(contractId);
-                } catch (error) {
-                    // Silently fail if inspection fails
-                }
-            }
+
 
             contracts.push({
                 name: contractName,
                 path: dir,
                 contractId,
-                functions,
                 hasWasm,
                 lastDeployed: lastDeployment?.deployedAt
             });
@@ -183,56 +209,35 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         return history.slice(-10);
     }
 
-    private async inspectContract(contractId: string): Promise<void> {
-        if (!this._view || !this._webView) {
-            return;
-        }
 
-        const config = vscode.workspace.getConfiguration('stellarSuite');
-        const cliPath = config.get<string>('cliPath', 'stellar');
-        const source = config.get<string>('source', 'dev');
-        const network = config.get<string>('network', 'testnet') || 'testnet';
-
-        try {
-            const inspector = new ContractInspector(cliPath, source, network);
-            const functions = await inspector.getContractFunctions(contractId);
-
-            const contracts = await this.getContracts();
-            const contract = contracts.find(c => c.contractId === contractId);
-            if (contract) {
-                contract.functions = functions;
-            }
-
-            const deployments = this.getDeployments();
-            this._webView.updateContent(contracts, deployments);
-        } catch (error) {
-            vscode.window.showErrorMessage(`Failed to inspect contract: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
-    }
 
     public showDeploymentResult(deployment: DeploymentRecord) {
         const deploymentHistory = this._context.workspaceState.get<DeploymentRecord[]>(
             'stellarSuite.deploymentHistory',
             []
         );
-        
-        const exists = deploymentHistory.some(d => 
-            d.contractId === deployment.contractId && 
+
+        const exists = deploymentHistory.some(d =>
+            d.contractId === deployment.contractId &&
             d.deployedAt === deployment.deployedAt
         );
-        
+
         if (!exists) {
             deploymentHistory.push(deployment);
             this._context.workspaceState.update('stellarSuite.deploymentHistory', deploymentHistory);
         }
-        
+
         const deployedContracts = this._context.workspaceState.get<Record<string, string>>(
             'stellarSuite.deployedContracts',
             {}
         );
-        deployedContracts[deployment.contractName] = deployment.contractId;
+
+        // Use path if available, fallback to name (for backwards compatibility/WASM only deploys)
+        const key = deployment.contractPath || deployment.contractName;
+        deployedContracts[key] = deployment.contractId;
+
         this._context.workspaceState.update('stellarSuite.deployedContracts', deployedContracts);
-        
+
         this.refresh();
     }
 
@@ -241,10 +246,25 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
     }
 
     public async clearDeployments() {
+        const confirm = await vscode.window.showWarningMessage(
+            'Are you sure you want to clear all deployment history? This cannot be undone.',
+            { modal: true },
+            'Clear All'
+        );
+
+        if (confirm !== 'Clear All') {
+            return;
+        }
+
         await this._context.workspaceState.update('stellarSuite.deploymentHistory', []);
         await this._context.workspaceState.update('stellarSuite.deployedContracts', {});
         await this._context.workspaceState.update('lastContractId', undefined);
+
+        await this._context.workspaceState.update('selectedContractPath', undefined);
+        await this._context.workspaceState.update('selectedContractId', undefined);
+
         await this.refresh();
+        vscode.window.showInformationMessage('Deployment history cleared.');
     }
 
     public addCliHistoryEntry(command: string, args?: string[]) {
@@ -252,21 +272,21 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
             'stellarSuite.cliHistory',
             []
         );
-        
+
         const entry = {
             command: command,
             args: args || [],
             timestamp: new Date().toISOString()
         };
-        
+
         history.push(entry);
-        
+
         if (history.length > 50) {
             history.shift();
         }
-        
+
         this._context.workspaceState.update('stellarSuite.cliHistory', history);
-        
+
         if (this._view && this._webView) {
             const currentHistory = this.getCliHistory();
             this._view.webview.postMessage({

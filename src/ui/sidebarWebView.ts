@@ -8,12 +8,12 @@ export class SidebarWebView {
         this.webview = webview;
     }
 
-    public updateContent(contracts: ContractInfo[], deployments: DeploymentRecord[]) {
-        const html = this.getHtml(contracts, deployments);
+    public updateContent(contracts: ContractInfo[], deployments: DeploymentRecord[], isCliInstalled: boolean = false) {
+        const html = this.getHtml(contracts, deployments, isCliInstalled);
         this.webview.html = html;
     }
 
-    private getHtml(contracts: ContractInfo[], deployments: DeploymentRecord[]): string {
+    private getHtml(contracts: ContractInfo[], deployments: DeploymentRecord[], isCliInstalled: boolean): string {
         const contractsHtml = this.renderContracts(contracts);
         const deploymentsHtml = this.renderDeployments(deployments);
 
@@ -193,20 +193,6 @@ export class SidebarWebView {
             background: var(--vscode-testing-iconPassed);
             color: var(--vscode-editor-background);
         }
-        .functions-list {
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px solid var(--vscode-sideBar-border);
-        }
-        .function-item {
-            font-size: 11px;
-            padding: 4px 0;
-            color: var(--vscode-descriptionForeground);
-        }
-        .function-name {
-            font-weight: 600;
-            color: var(--vscode-foreground);
-        }
         .empty-state {
             text-align: center;
             padding: 24px;
@@ -237,12 +223,47 @@ export class SidebarWebView {
             color: var(--vscode-descriptionForeground);
             margin-top: 2px;
         }
+        .clipboard-copy {
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 3px;
+            transition: background 0.2s;
+            font-family: var(--vscode-editor-font-family);
+            font-size: 10px;
+        }
+        .clipboard-copy:hover {
+            background: var(--vscode-button-secondaryHoverBackground);
+        }
+        .icon-btn:hover {
+            background: var(--vscode-button-secondaryHoverBackground);
+            transform: translateY(-1px);
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h2>Stellar Kit</h2>
-        <button class="refresh-btn" onclick="refresh()">Refresh</button>
+    <div class="header" style="flex-direction: column; align-items: stretch; gap: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>Kit Studio</h2>
+            <button class="refresh-btn" onclick="refresh()">Refresh</button>
+        </div>
+        <div style="font-size: 11px; padding: 6px 8px; border-radius: 4px; background: ${isCliInstalled ? 'var(--vscode-testing-iconPassed)' : 'var(--vscode-errorForeground)'}; color: var(--vscode-editor-background); display: flex; justify-content: space-between; align-items: center; font-weight: 600;">
+            <span style="display: flex; align-items: center; gap: 6px;">
+                Stellar CLI: ${isCliInstalled ? 'Installed' : 'Not Found'}
+            </span>
+            ${!isCliInstalled ? `<button onclick="installCli()" style="background: transparent; border: 1px solid currentColor; color: inherit; padding: 2px 6px; border-radius: 3px; cursor: pointer; font-size: 10px;">Install</button>` : ''}
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Quick Actions</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <button class="btn btn-secondary" style="width: 100%; text-align: left; display: flex; align-items: center; gap: 6px;" onclick="executeCommand('stellarSuite.switchNetwork')">Switch Network</button>
+            <button class="btn btn-secondary" style="width: 100%; text-align: left; display: flex; align-items: center; gap: 6px;" onclick="executeCommand('stellarSuite.keysGenerate')">Create Identity</button>
+            <button class="btn btn-secondary" style="width: 100%; text-align: left; display: flex; align-items: center; gap: 6px;" onclick="executeCommand('stellarSuite.keysList')">Identities</button>
+            <button class="btn btn-secondary" style="width: 100%; text-align: left; display: flex; align-items: center; gap: 6px;" onclick="executeCommand('stellarSuite.keysFund')">Fund Account</button>
+            <button class="btn btn-secondary" style="width: 100%; text-align: left; display: flex; align-items: center; gap: 6px;" onclick="executeCommand('stellarSuite.simulateFromSidebar')">Simulate Tx</button>
+            <button class="btn btn-secondary" style="width: 100%; text-align: left; display: flex; align-items: center; gap: 6px;" onclick="executeCommand('stellarSuite.runInvoke')">Run Tx</button>
+        </div>
     </div>
 
     <div class="section">
@@ -289,6 +310,10 @@ export class SidebarWebView {
             vscode.postMessage({ command: 'refresh' });
         }
         
+        function installCli() {
+            vscode.postMessage({ command: 'installCli' });
+        }
+        
         function deploy(contractPath) {
             vscode.postMessage({ command: 'deploy', contractPath: contractPath });
         }
@@ -297,18 +322,40 @@ export class SidebarWebView {
             vscode.postMessage({ command: 'build', contractPath: contractPath });
         }
         
-        function simulate(contractId) {
-            vscode.postMessage({ command: 'simulate', contractId: contractId });
+        function buildOptimized(contractPath) {
+            vscode.postMessage({ command: 'execute', executeCommand: 'stellarSuite.buildContract', args: { contractPath: contractPath, optimize: true } });
+        }
+        
+        function copyToClipboard(text) {
+            vscode.postMessage({ command: 'copyToClipboard', text: text });
+        }
+        
+        function simulate(contractId, functionName) {
+            vscode.postMessage({ command: 'simulate', contractId: contractId, functionName: functionName });
         }
         
         function inspectContract(contractId) {
             vscode.postMessage({ command: 'inspectContract', contractId: contractId });
         }
         
+        function runInvoke(contractId, functionName) {
+            vscode.postMessage({ command: 'runInvoke', contractId: contractId, functionName: functionName });
+        }
+
+        function contractInfo(contractId) {
+            vscode.postMessage({ command: 'contractInfo', contractId: contractId });
+        }
+        
+        function copyId(id) {
+            copyToClipboard(id);
+        }
+        
+        function executeCommand(cmd, args) {
+            vscode.postMessage({ command: 'execute', executeCommand: cmd, args: args });
+        }
+        
         function clearDeployments() {
-            if (confirm('Are you sure you want to clear all deployment history?')) {
-                vscode.postMessage({ command: 'clearDeployments' });
-            }
+            vscode.postMessage({ command: 'clearDeployments' });
         }
 
         function applyFilters() {
@@ -382,21 +429,10 @@ export class SidebarWebView {
         }
 
         return contracts.map(contract => {
-            const buildStatusBadge = contract.hasWasm 
-                ? '<span class="status-badge-success">Built</span>' 
+            const buildStatusBadge = contract.hasWasm
+                ? '<span class="status-badge-success">Built</span>'
                 : '';
-            const functionsHtml = contract.functions && contract.functions.length > 0
-                ? `<div class="functions-list">
-                    ${contract.functions.map(fn => `
-                        <div class="function-item">
-                            <span class="function-name">${this.escapeHtml(fn.name)}</span>
-                            ${fn.parameters.length > 0
-                                ? `(${fn.parameters.map(p => this.escapeHtml(p.name)).join(', ')})`
-                                : '()'}
-                        </div>
-                    `).join('')}
-                   </div>`
-                : '';
+            const functionsHtml = '';
 
             return `
                 <div class="contract-item">
@@ -405,14 +441,15 @@ export class SidebarWebView {
                         ${buildStatusBadge}
                     </div>
                     <div class="contract-path">${this.escapeHtml(contract.path)}</div>
-                    ${contract.contractId ? `<div class="contract-id">ID: ${this.escapeHtml(contract.contractId)}</div>` : ''}
+                    ${contract.contractId ? `<div class="contract-id clipboard-copy" onclick="copyToClipboard('${this.escapeHtml(contract.contractId)}')" title="Click to copy Contract ID">ID: ${this.escapeHtml(contract.contractId)} <span style="font-size: 10px; opacity: 0.7;">[COPY]</span></div>` : ''}
                     ${contract.lastDeployed ? `<div class="timestamp">Deployed: ${new Date(contract.lastDeployed).toLocaleString()}</div>` : ''}
                     ${functionsHtml}
                     <div class="contract-actions" data-is-built="${contract.hasWasm}">
                         <button class="btn" onclick="build('${this.escapeHtml(contract.path)}')">Build</button>
                         ${contract.hasWasm ? `<button class="btn" onclick="deploy('${this.escapeHtml(contract.path)}')">Deploy</button>` : ''}
                         ${contract.contractId ? `<button class="btn btn-secondary" onclick="simulate('${this.escapeHtml(contract.contractId)}')">Simulate</button>` : ''}
-                        ${contract.contractId ? `<button class="btn btn-secondary" onclick="inspectContract('${this.escapeHtml(contract.contractId)}')">Inspect</button>` : ''}
+                        ${contract.contractId ? `<button class="btn btn-secondary" onclick="runInvoke('${this.escapeHtml(contract.contractId)}')">Run</button>` : ''}
+                        ${contract.contractId ? `<button class="btn btn-secondary" onclick="contractInfo('${this.escapeHtml(contract.contractId)}')">Info</button>` : ''}
                     </div>
                 </div>
             `;
@@ -428,7 +465,9 @@ export class SidebarWebView {
             const date = new Date(deployment.deployedAt);
             return `
                 <div class="deployment-item">
-                    <div class="contract-id">Contract ID: ${this.escapeHtml(deployment.contractId)}</div>
+                    <div class="contract-id clipboard-copy" onclick="copyToClipboard('${this.escapeHtml(deployment.contractId)}')" title="Click to copy Contract ID">
+                        Contract ID: ${this.escapeHtml(deployment.contractId)} <span style="font-size: 10px;">[COPY]</span>
+                    </div>
                     <div class="timestamp">${date.toLocaleString()}</div>
                     <div class="timestamp">Network: ${this.escapeHtml(deployment.network)} | Source: ${this.escapeHtml(deployment.source)}</div>
                 </div>

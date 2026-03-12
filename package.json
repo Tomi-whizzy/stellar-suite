@@ -63,21 +63,6 @@
         "icon": "$(refresh)"
       },
       {
-        "command": "stellarSuite.clearSimulationCache",
-        "title": "Kit Studio: Clear Simulation Cache",
-        "icon": "$(trash)"
-      },
-      {
-        "command": "stellarSuite.showSimulationCacheStats",
-        "title": "Kit Studio: Simulation Cache Stats",
-        "icon": "$(info)"
-      },
-      {
-        "command": "stellarSuite.deployBatch",
-        "title": "Kit Studio: Deploy Batch",
-        "icon": "$(cloud-upload)"
-      },
-      {
         "command": "stellarSuite.deployFromSidebar",
         "title": "Deploy Contract",
         "icon": "$(cloud-upload)"
@@ -92,200 +77,42 @@
         "title": "Kit Studio: Build Contract"
       },
       {
-        "command": "stellarSuite.configureCli",
-        "title": "Kit Studio: Configure CLI"
+        "command": "stellarSuite.installCli",
+        "title": "Kit Studio: Install Stellar CLI"
       },
       {
-        "command": "stellarSuite.showSimulationHistory",
-        "title": "Kit Studio: Show Simulation History"
+        "command": "stellarSuite.switchNetwork",
+        "title": "Kit Studio: Switch Stellar Network"
       },
       {
-        "command": "stellarSuite.clearSimulationHistory",
-        "title": "Kit Studio: Clear Simulation History"
+        "command": "stellarSuite.keysGenerate",
+        "title": "Kit Studio: Generate Identity"
       },
       {
-        "command": "stellarSuite.exportSimulationHistory",
-        "title": "Kit Studio: Export Simulation History"
+        "command": "stellarSuite.keysFund",
+        "title": "Kit Studio: Fund Identity on Testnet"
       },
       {
-        "command": "stellarSuite.importSimulationHistory",
-        "title": "Kit Studio: Import Simulation History"
+        "command": "stellarSuite.keysList",
+        "title": "Kit Studio: Manage Identities"
       },
       {
-        "command": "stellarSuite.searchSimulationHistory",
-        "title": "Kit Studio: Search Simulation History"
+        "command": "stellarSuite.switchIdentity",
+        "title": "Kit Studio: Switch Stellar Identity"
       },
       {
-        "command": "stellarSuite.showCompilationStatus",
-        "title": "Kit Studio: Show Compilation Status"
+        "command": "stellarSuite.generateBindings",
+        "title": "Kit Studio: Generate Bindings"
       },
       {
-        "command": "stellarSuite.createBackup",
-        "title": "Kit Studio: Create State Backup"
+        "command": "stellarSuite.runInvoke",
+        "title": "Kit Studio: Run Invocation (Submit)",
+        "icon": "$(zap)"
       },
       {
-        "command": "stellarSuite.restoreBackup",
-        "title": "Kit Studio: Restore State from Backup"
-      },
-      {
-        "command": "stellarSuite.showBackupHistory",
-        "title": "Kit Studio: Show Backup History"
-      },
-      {
-        "command": "stellarSuite.deleteBackup",
-        "title": "Kit Studio: Delete Backup"
-      },
-      {
-        "command": "stellarSuite.validateBackups",
-        "title": "Kit Studio: Validate Backups"
-      },
-      {
-        "command": "stellarSuite.clearAllBackups",
-        "title": "Kit Studio: Clear All Backups"
-      },
-      {
-        "command": "stellarSuite.exportBackups",
-        "title": "Kit Studio: Export Backups"
-      },
-      {
-        "command": "stellarSuite.importBackups",
-        "title": "Kit Studio: Import Backups"
-      },
-      {
-        "command": "stellarSuite.replaySimulation",
-        "title": "Kit Studio: Replay Simulation"
-      },
-      {
-        "command": "stellarSuite.replayWithModifications",
-        "title": "Kit Studio: Replay Simulation with Modifications"
-      },
-      {
-        "command": "stellarSuite.batchReplaySimulations",
-        "title": "Kit Studio: Batch Replay Simulations"
-      },
-      {
-        "command": "stellarSuite.exportReplayResults",
-        "title": "Kit Studio: Export Replay Results"
-      },
-      {
-        "command": "stellarSuite.compareSimulations",
-        "title": "Kit Studio: Compare Simulations"
-      },
-      {
-        "command": "stellarSuite.compareSelected",
-        "title": "Kit Studio: Compare Selected Simulations"
-      },
-      {
-        "command": "stellarSuite.compareLastN",
-        "title": "Kit Studio: Compare Last N Simulations"
-      },
-      {
-        "command": "stellarSuite.compareSameContract",
-        "title": "Kit Studio: Compare Simulations (Same Contract)"
-      },
-      {
-        "command": "stellarSuite.compareSameFunction",
-        "title": "Kit Studio: Compare Simulations (Same Function)"
-      },
-      {
-        "command": "stellarSuite.showSimulationDiff",
-        "title": "Kit Studio: Show Simulation Diff"
-      },
-      {
-        "command": "stellarSuite.compareWithPrevious",
-        "title": "Kit Studio: Compare With Previous Simulation"
-      },
-      {
-        "command": "stellarSuite.compareTwoSimulations",
-        "title": "Kit Studio: Compare Two Simulations"
-      },
-      {
-        "command": "stellarSuite.compareLatestWithAny",
-        "title": "Kit Studio: Compare Latest With Any"
-      },
-      {
-        "command": "stellarSuite.showResourceProfile",
-        "title": "Kit Studio: Show Resource Profile"
-      },
-      {
-        "command": "stellarSuite.compareResourceProfiles",
-        "title": "Kit Studio: Compare Resource Profiles"
-      },
-      {
-        "command": "stellarSuite.exportResourceProfiles",
-        "title": "Kit Studio: Export Resource Profiles"
-      },
-      {
-        "command": "stellarSuite.importResourceProfiles",
-        "title": "Kit Studio: Import Resource Profiles"
-      },
-      {
-        "command": "stellarSuite.showResourceStats",
-        "title": "Kit Studio: Show Resource Statistics"
-      },
-      {
-        "command": "stellarSuite.clearResourceProfiles",
-        "title": "Kit Studio: Clear Resource Profiles"
-      },
-      {
-        "command": "stellarSuite.manageRpcAuth",
-        "title": "Kit Studio: Manage RPC Authentication"
-      },
-      {
-        "command": "stellarSuite.manageEnvVariables",
-        "title": "Kit Studio: Manage Environment Variables"
-      },
-      {
-        "command": "stellarSuite.checkCliVersion",
-        "title": "Kit Studio: Check CLI Version"
-      },
-      {
-        "command": "stellarSuite.openNotificationPreferences",
-        "title": "Kit Studio: Open Notification Preferences"
-      },
-      {
-        "command": "stellarSuite.generateAbi",
-        "title": "Kit Studio: Generate Contract ABI"
-      },
-      {
-        "command": "stellarSuite.exportAbi",
-        "title": "Kit Studio: Export Contract ABI"
-      },
-      {
-        "command": "stellarSuite.importAbi",
-        "title": "Kit Studio: Import Contract ABI"
-      },
-      {
-        "command": "stellarSuite.showAbiDetails",
-        "title": "Kit Studio: Show ABI Details"
-      },
-      {
-        "command": "stellarSuite.parseContractSource",
-        "title": "Kit Studio: Parse Contract Source Code"
-      },
-      {
-        "command": "stellarSuite.showRpcHealth",
-        "title": "Kit Studio: Show RPC Health"
-      },
-      {
-        "command": "stellarSuite.checkRpcHealth",
-        "title": "Kit Studio: Check RPC Health"
-      },
-      {
-        "command": "stellarSuite.viewRpcHistory",
-        "title": "Kit Studio: View RPC History"
-      },
-      {
-        "command": "stellarSuite.switchRpcEndpoint",
-        "title": "Kit Studio: Switch RPC Endpoint"
-      },
-      {
-        "command": "stellarSuite.viewCircuitBreakerStatus",
-        "title": "Kit Studio: View Circuit Breaker Status"
-      },
-      {
-        "command": "stellarSuite.resetCircuitBreaker",
-        "title": "Kit Studio: Reset Circuit Breaker"
+        "command": "stellarSuite.contractInfo",
+        "title": "Kit Studio: Inspect Metadata",
+        "icon": "$(info)"
       }
     ],
     "menus": {
@@ -304,6 +131,21 @@
         },
         {
           "command": "stellarSuite.simulateFromSidebar",
+          "when": "view == stellarSuite.contractsView",
+          "group": "inline"
+        },
+        {
+          "command": "stellarSuite.generateBindings",
+          "when": "view == stellarSuite.contractsView",
+          "group": "inline"
+        },
+        {
+          "command": "stellarSuite.runInvoke",
+          "when": "view == stellarSuite.contractsView",
+          "group": "inline"
+        },
+        {
+          "command": "stellarSuite.contractInfo",
           "when": "view == stellarSuite.contractsView",
           "group": "inline"
         }
@@ -343,40 +185,7 @@
           "default": "https://soroban-testnet.stellar.org:443",
           "description": "Stellar RPC endpoint URL for transaction simulation"
         },
-        "stellarSuite.simulationCacheEnabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable caching for simulation results."
-        },
-        "stellarSuite.simulationCacheTtlSeconds": {
-          "type": "number",
-          "default": 60,
-          "minimum": 0,
-          "description": "Simulation cache TTL in seconds. 0 disables caching via immediate expiry."
-        },
-        "stellarSuite.simulationCacheMaxEntries": {
-          "type": "number",
-          "default": 200,
-          "minimum": 0,
-          "description": "Maximum number of cached simulation results. 0 disables caching."
-        },
-        "stellarSuite.rpcEndpoints": {
-          "type": "array",
-          "default": [
-            {
-              "url": "https://soroban-testnet.stellar.org:443",
-              "priority": 0,
-              "enabled": true,
-              "name": "Default Testnet"
-            }
-          ],
-          "description": "List of Stellar RPC endpoints for fallback and health monitoring."
-        },
-        "stellarSuite.automaticFailover": {
-          "type": "boolean",
-          "default": true,
-          "description": "Automatically failover to the next healthy RPC endpoint if the current one fails."
-        },
+
         "stellarSuite.useLocalCli": {
           "type": "boolean",
           "default": true,
@@ -397,153 +206,10 @@
           "default": "testnet",
           "description": "Network to use for deployments and invocations (testnet, mainnet, etc.)"
         },
-        "stellarSuite.rpc.rateLimit.maxRetries": {
-          "type": "number",
-          "default": 3,
-          "description": "Maximum number of times to retry an RPC request after hitting a rate limit."
-        },
-        "stellarSuite.rpc.rateLimit.initialBackoffMs": {
-          "type": "number",
-          "default": 1000,
-          "description": "Initial backoff time (in milliseconds) before the first retry."
-        },
-        "stellarSuite.rpc.rateLimit.maxBackoffMs": {
-          "type": "number",
-          "default": 30000,
-          "description": "Maximum backoff time (in milliseconds) when rate-limited."
-        },
-        "stellarSuite.keyboard.showHints": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show keyboard shortcut hints on contract cards in the sidebar."
-        },
-        "stellarSuite.signing.defaultMethod": {
+        "stellarSuite.networkPassphrase": {
           "type": "string",
-          "enum": [
-            "interactive",
-            "keypairFile",
-            "storedKeypair",
-            "hardwareWallet",
-            "sourceAccount"
-          ],
-          "default": "interactive",
-          "description": "Default signing method for deployment transactions."
-        },
-        "stellarSuite.signing.requireValidatedSignature": {
-          "type": "boolean",
-          "default": true,
-          "description": "Require successful signature validation before deployment is submitted."
-        },
-        "stellarSuite.signing.enableSecureKeyStorage": {
-          "type": "boolean",
-          "default": true,
-          "description": "Allow storing deployment keypairs in VS Code SecretStorage."
-        },
-        "stellarSuite.minimumCliVersion": {
-          "type": "string",
-          "default": "21.0.0",
-          "description": "Minimum required Stellar CLI version"
-        },
-        "stellarSuite.cliVersionCheck.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable automatic CLI version detection and compatibility checks"
-        },
-        "stellarSuite.cliVersionCheck.intervalMinutes": {
-          "type": "number",
-          "default": 60,
-          "minimum": 0,
-          "description": "How often to re-check CLI version (0 = only on activation)"
-        },
-        "stellarSuite.deployment.retry.maxAttempts": {
-          "type": "number",
-          "default": 3,
-          "minimum": 1,
-          "maximum": 10,
-          "description": "Maximum number of deployment attempts (initial attempt + retries)."
-        },
-        "stellarSuite.deployment.retry.initialDelayMs": {
-          "type": "number",
-          "default": 1000,
-          "minimum": 100,
-          "description": "Initial backoff delay in milliseconds before the first retry."
-        },
-        "stellarSuite.deployment.retry.maxDelayMs": {
-          "type": "number",
-          "default": 30000,
-          "minimum": 1000,
-          "description": "Maximum backoff delay in milliseconds between retry attempts."
-        },
-        "stellarSuite.deployment.retry.backoffMultiplier": {
-          "type": "number",
-          "default": 2,
-          "minimum": 1,
-          "description": "Exponential backoff multiplier applied after each failed attempt."
-        },
-        "stellarSuite.deployment.retry.useJitter": {
-          "type": "boolean",
-          "default": true,
-          "description": "Add random jitter to retry delays to prevent thundering-herd retries."
-        },
-        "stellarSuite.deployment.retry.attemptTimeoutMs": {
-          "type": "number",
-          "default": 60000,
-          "minimum": 5000,
-          "description": "Per-attempt timeout in milliseconds. Timed-out attempts are retried if attempts remain."
-        },
-        "stellarSuite.notifications.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable or disable toast notifications."
-        },
-        "stellarSuite.notifications.maxVisible": {
-          "type": "number",
-          "default": 3,
-          "minimum": 1,
-          "maximum": 10,
-          "description": "Maximum number of visible toast notifications at once."
-        },
-        "stellarSuite.notifications.maxQueued": {
-          "type": "number",
-          "default": 10,
-          "minimum": 1,
-          "maximum": 50,
-          "description": "Maximum number of notifications in the queue."
-        },
-        "stellarSuite.notifications.defaultDuration": {
-          "type": "number",
-          "default": 5000,
-          "minimum": 0,
-          "maximum": 300000,
-          "description": "Default notification duration in milliseconds (0 = no auto-dismiss)."
-        },
-        "stellarSuite.notifications.position": {
-          "type": "string",
-          "enum": [
-            "top-right",
-            "top-left",
-            "bottom-right",
-            "bottom-left",
-            "top-center",
-            "bottom-center"
-          ],
-          "default": "bottom-right",
-          "description": "Position of toast notifications on screen."
-        },
-        "stellarSuite.notifications.enableAnimations": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable animations for toast notifications."
-        },
-        "stellarSuite.notifications.soundEnabled": {
-          "type": "boolean",
-          "default": false,
-          "description": "Play sound when a notification is shown (reserved for future use)."
-        },
-        "stellarSuite.notifications.actionsEnabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show action buttons on notifications when available."
+          "default": "Test SDF Network ; September 2015",
+          "description": "Network passphrase for signing transactions (Only needed if using rpcUrl without a named network)"
         }
       }
     }

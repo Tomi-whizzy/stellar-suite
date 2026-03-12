@@ -11,7 +11,7 @@ license = "Apache-2.0"
 publish = false
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 # CONTRACT DETAILS: Replace "example_contract" with your library module name.
 name = "example_contract"
 

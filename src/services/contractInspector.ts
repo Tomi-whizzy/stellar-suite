@@ -42,27 +42,30 @@ export class ContractInspector {
     private cliPath: string;
     private source: string;
     private network: string;
+    private rpcUrl: string;
+    private networkPassphrase: string;
 
-    constructor(cliPath: string, source: string = 'dev', network: string = 'testnet') {
+    constructor(cliPath: string, source: string = 'dev', network: string = 'testnet', rpcUrl: string = 'https://soroban-testnet.stellar.org:443', networkPassphrase: string = 'Test SDF Network ; September 2015') {
         this.cliPath = cliPath;
         this.source = source;
         this.network = network;
+        this.rpcUrl = rpcUrl;
+        this.networkPassphrase = networkPassphrase;
     }
 
     async getContractFunctions(contractId: string): Promise<ContractFunction[]> {
         try {
             const env = getEnvironmentWithPath();
-            
             const { stdout } = await execFileAsync(
                 this.cliPath,
                 [
                     'contract',
-                    'invoke',
+                    'info',
+                    'interface',
                     '--id', contractId,
-                    '--source', this.source,
-                    '--network', this.network,
-                    '--',
-                    '--help'
+                    '--rpc-url', this.rpcUrl,
+                    '--network-passphrase', this.networkPassphrase,
+                    '--output', 'json-formatted'
                 ],
                 {
                     env: env,
@@ -71,17 +74,62 @@ export class ContractInspector {
                 }
             );
 
-            return this.parseHelpOutput(stdout);
+            return this.parseInterfaceJson(stdout);
         } catch (error) {
-            console.error('Failed to get contract functions:', error);
-            return [];
+            console.error('Failed to get contract functions via JSON interface:', error);
+            // Fallback to legacy help parsing if JSON fails for some reason
+            return this.getContractFunctionsLegacy(contractId);
         }
     }
 
     async getFunctionHelp(contractId: string, functionName: string): Promise<ContractFunction | null> {
+        const functions = await this.getContractFunctions(contractId);
+        return functions.find(f => f.name === functionName) || null;
+    }
+
+    private parseInterfaceJson(jsonOutput: string): ContractFunction[] {
+        try {
+            const entries = JSON.parse(jsonOutput);
+            if (!Array.isArray(entries)) return [];
+
+            const functions: ContractFunction[] = [];
+
+            for (const entry of entries) {
+                if (entry.function_v0) {
+                    const fn = entry.function_v0;
+                    functions.push({
+                        name: fn.name,
+                        description: fn.doc || '',
+                        parameters: (fn.inputs || []).map((input: any) => ({
+                            name: input.name,
+                            type: this.formatType(input.type_),
+                            required: true,
+                            description: input.doc || ''
+                        }))
+                    });
+                }
+            }
+
+            return functions;
+        } catch (e) {
+            console.error('Error parsing interface JSON:', e);
+            return [];
+        }
+    }
+
+    private formatType(typeObj: any): string {
+        if (typeof typeObj === 'string') return typeObj;
+        if (typeObj.udt) return typeObj.udt.name;
+        if (typeObj.vec) return `Vec<${this.formatType(typeObj.vec.element_type)}>`;
+        if (typeObj.map) return `Map<${this.formatType(typeObj.map.key_type)}, ${this.formatType(typeObj.map.value_type)}>`;
+        if (typeObj.optional) return `${this.formatType(typeObj.optional.value_type)} (optional)`;
+        if (typeObj.tuple) return `Tuple(${typeObj.tuple.value_types.map((t: any) => this.formatType(t)).join(', ')})`;
+        return JSON.stringify(typeObj);
+    }
+
+    private async getContractFunctionsLegacy(contractId: string): Promise<ContractFunction[]> {
         try {
             const env = getEnvironmentWithPath();
-            
             const { stdout } = await execFileAsync(
                 this.cliPath,
                 [
@@ -89,22 +137,16 @@ export class ContractInspector {
                     'invoke',
                     '--id', contractId,
                     '--source', this.source,
-                    '--network', this.network,
+                    '--rpc-url', this.rpcUrl,
+                    '--network-passphrase', this.networkPassphrase,
                     '--',
-                    functionName,
                     '--help'
                 ],
-                {
-                    env: env,
-                    maxBuffer: 10 * 1024 * 1024,
-                    timeout: 30000
-                }
+                { env: env, timeout: 30000 }
             );
-
-            return this.parseFunctionHelp(functionName, stdout);
-        } catch (error) {
-            console.error(`Failed to get help for function ${functionName}:`, error);
-            return null;
+            return this.parseHelpOutput(stdout);
+        } catch {
+            return [];
         }
     }
 
@@ -148,73 +190,6 @@ export class ContractInspector {
             }
         }
 
-        if (functions.length === 0) {
-            const usageMatches = Array.from(helpOutput.matchAll(/Usage:\s+(\w+)\s+\[OPTIONS\]/gi));
-            for (const match of usageMatches) {
-                const funcName = match[1];
-                if (!seenFunctions.has(funcName)) {
-                    seenFunctions.add(funcName);
-                    functions.push({
-                        name: funcName,
-                        parameters: []
-                    });
-                }
-            }
-        }
-
         return functions;
-    }
-
-    private parseFunctionHelp(functionName: string, helpOutput: string): ContractFunction {
-        const functionInfo: ContractFunction = {
-            name: functionName,
-            parameters: []
-        };
-
-        const lines = helpOutput.split('\n');
-        let inOptionsSection = false;
-
-        for (const line of lines) {
-            const trimmed = line.trim();
-
-            if (trimmed.toLowerCase().includes('options:') || 
-                trimmed.toLowerCase().includes('arguments:') ||
-                trimmed.toLowerCase().includes('parameters:')) {
-                inOptionsSection = true;
-                continue;
-            }
-
-            if (trimmed.toLowerCase().includes('usage:') && inOptionsSection) {
-                break;
-            }
-
-            if (inOptionsSection && trimmed.length > 0 && !trimmed.startsWith('--')) {
-                if (!trimmed.match(/^[A-Z]/)) {
-                    continue;
-                }
-            }
-
-            if (inOptionsSection && trimmed.length > 0) {
-                const paramMatch = trimmed.match(/-{1,2}(\w+)(?:\s+<([^>]+)>)?\s+(.+)/);
-                if (paramMatch) {
-                    const paramName = paramMatch[1];
-                    const paramType = paramMatch[2];
-                    const paramDesc = paramMatch[3]?.trim() || '';
-                    
-                    const isOptional = trimmed.toLowerCase().includes('[optional]') || 
-                                     trimmed.toLowerCase().includes('optional') ||
-                                     trimmed.toLowerCase().includes('default:');
-
-                    functionInfo.parameters.push({
-                        name: paramName,
-                        type: paramType,
-                        required: !isOptional,
-                        description: paramDesc
-                    });
-                }
-            }
-        }
-
-        return functionInfo;
     }
 }

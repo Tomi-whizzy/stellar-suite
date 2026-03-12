@@ -241,11 +241,22 @@ export async function deployContract(context: vscode.ExtensionContext, sidebarPr
                         outputChannel.appendLine('');
                     }
                 } else if (contractDir) {
+                    const deployType = await vscode.window.showQuickPick(
+                        [
+                            { label: 'Standard Build & Deploy', description: 'Faster build, larger WASM', value: false },
+                            { label: 'Optimized Build & Deploy', description: 'Production-ready, smaller WASM', value: true }
+                        ],
+                        { placeHolder: 'Select deployment build type' }
+                    );
+
+                    if (deployType === undefined) return;
+                    const optimize = deployType.value;
+
                     progress.report({ increment: 10, message: 'Building contract...' });
-                    outputChannel.appendLine(`\nBuilding contract in: ${contractDir}`);
+                    outputChannel.appendLine(`\nBuilding contract (optimize: ${optimize}) in: ${contractDir}`);
                     outputChannel.appendLine('Running: stellar contract build\n');
                     
-                    result = await deployer.buildAndDeploy(contractDir);
+                    result = await deployer.buildAndDeploy(contractDir, optimize);
                     
                     if (sidebarProvider) {
                         sidebarProvider.addCliHistoryEntry('stellar contract build', [contractDir]);
@@ -291,6 +302,7 @@ export async function deployContract(context: vscode.ExtensionContext, sidebarPr
                         const deploymentRecord = {
                             contractId: result.contractId,
                             contractName: contractName,
+                            contractPath: contractDir || undefined,
                             deployedAt: new Date().toISOString(),
                             network,
                             source

@@ -119,9 +119,15 @@ export class SimulationPanel {
             return escapeHtml(String(value));
         };
 
-        const statusClass = result.success ? 'success' : 'error';
-        const statusIcon = result.success ? '[OK]' : '[FAIL]';
-        const statusText = result.success ? 'Success' : 'Failed';
+        let statusClass = result.success ? 'success' : 'error';
+        let statusIcon = result.success ? '[OK]' : '[FAIL]';
+        let statusText = result.success ? 'Success' : 'Failed';
+
+        if (!result.success && result.error === 'Running simulation...') {
+            statusClass = 'pending';
+            statusIcon = '[...]';
+            statusText = 'Simulating...';
+        }
 
         const resourceUsageHtml = result.resourceUsage
             ? `
@@ -130,7 +136,36 @@ export class SimulationPanel {
                 <table>
                     ${result.resourceUsage.cpuInstructions ? `<tr><td>CPU Instructions:</td><td>${result.resourceUsage.cpuInstructions.toLocaleString()}</td></tr>` : ''}
                     ${result.resourceUsage.memoryBytes ? `<tr><td>Memory:</td><td>${(result.resourceUsage.memoryBytes / 1024).toFixed(2)} KB</td></tr>` : ''}
+                    ${result.resourceUsage.minResourceFee ? `<tr><td>Min Resource Fee:</td><td>${Number(result.resourceUsage.minResourceFee).toLocaleString()} stroops</td></tr>` : ''}
                 </table>
+            </div>
+            `
+            : '';
+
+        const eventsHtml = result.events && result.events.length > 0
+            ? `
+            <div class="section">
+                <h3>Emitted Events</h3>
+                ${result.events.map((e, i) => `
+                    <div class="event-item" style="margin-bottom: 8px; padding: 12px; background: var(--vscode-textCodeBlock-background); border: 1px solid var(--vscode-panel-border); border-radius: 4px;">
+                        <div style="font-weight: 600; margin-bottom: 4px; color: var(--vscode-textLink-foreground);">Event #${i + 1}</div>
+                        <pre style="margin: 0; padding: 0; background: transparent; border: none; overflow-x: auto;">${escapeHtml(typeof e === 'string' ? e : JSON.stringify(e, null, 2))}</pre>
+                    </div>
+                `).join('')}
+            </div>
+            `
+            : '';
+
+        const authHtml = result.auth && result.auth.length > 0
+            ? `
+            <div class="section">
+                <h3>Authorization Requirements</h3>
+                ${result.auth.map((a, i) => `
+                    <div class="auth-item" style="margin-bottom: 8px; padding: 12px; background: var(--vscode-textCodeBlock-background); border: 1px solid var(--vscode-panel-border); border-radius: 4px;">
+                        <div style="font-weight: 600; margin-bottom: 4px; color: var(--vscode-textLink-foreground);">Auth #${i + 1}</div>
+                        <pre style="margin: 0; padding: 0; background: transparent; border: none; overflow-x: auto;">${escapeHtml(JSON.stringify(a, null, 2))}</pre>
+                    </div>
+                `).join('')}
             </div>
             `
             : '';
@@ -161,6 +196,10 @@ export class SimulationPanel {
         }
         .status.error {
             background-color: var(--vscode-testing-iconFailed);
+            color: var(--vscode-editor-background);
+        }
+        .status.pending {
+            background-color: var(--vscode-progressBar-background);
             color: var(--vscode-editor-background);
         }
         .section {
@@ -232,6 +271,8 @@ export class SimulationPanel {
             </div>
         </div>
         ${resourceUsageHtml}
+        ${eventsHtml}
+        ${authHtml}
         `
         : `
         <div class="section">

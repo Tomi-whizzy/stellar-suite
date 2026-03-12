@@ -2,38 +2,46 @@ import * as vscode from 'vscode';
 import { simulateTransaction } from './commands/simulateTransaction';
 import { deployContract } from './commands/deployContract';
 import { buildContract } from './commands/buildContract';
+import { installCli } from './commands/installCli';
+import { switchNetwork } from './commands/switchNetwork';
+import { keysGenerate, keysFund, keysList } from './commands/keyManager';
+import { generateBindings } from './commands/generateBindings';
+import { runInvoke } from './commands/runInvoke';
+import { contractInfo } from './commands/contractInfo';
+import { initNetworkStatusBar } from './ui/networkStatusBar';
+import { initIdentityStatusBar } from './ui/identityStatusBar';
 import { SidebarViewProvider } from './ui/sidebarView';
 import { getSharedOutputChannel } from './utils/outputChannel';
-import { ContractGroupService } from './services/contractGroupService';
-import { registerCustomContextAction } from './services/contextMenuService';
+import { SorobanCliService } from './services/sorobanCliService';
 
 let sidebarProvider: SidebarViewProvider | undefined;
-let groupService: ContractGroupService | undefined;
 
-function registerGroupCommands(context: vscode.ExtensionContext, groupService: ContractGroupService) {
-    // Implementation to be added from the contract group service
-    // This would include commands for managing contract groups
-    return groupService;
-}
-
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
     const outputChannel = getSharedOutputChannel();
 
     try {
-        // Initialize contract group service
-        groupService = new ContractGroupService(context);
-        groupService.loadGroups().then(() => {
-            outputChannel.appendLine('[Extension] Contract group service initialized');
-        });
-
-        // Register group commands
-        registerGroupCommands(context, groupService);
-        outputChannel.appendLine('[Extension] Group commands registered');
-
-        sidebarProvider = new SidebarViewProvider(context.extensionUri, context, groupService);
+        sidebarProvider = new SidebarViewProvider(context.extensionUri, context);
         context.subscriptions.push(
             vscode.window.registerWebviewViewProvider(SidebarViewProvider.viewType, sidebarProvider)
         );
+
+        outputChannel.appendLine('[Extension] Checking for Stellar CLI in PATH...');
+        const cliPath = await SorobanCliService.findCliPath();
+        if (!cliPath) {
+            outputChannel.appendLine('[Extension] WARNING: Stellar CLI is not installed or not found in PATH.');
+            vscode.window.showInformationMessage(
+                'Stellar CLI is not installed or not found in PATH.',
+                'Install Stellar CLI'
+            ).then(selection => {
+                if (selection === 'Install Stellar CLI') {
+                    vscode.commands.executeCommand('stellarSuite.installCli');
+                }
+            });
+        } else {
+            outputChannel.appendLine(`[Extension] SUCCESS: Found Stellar CLI at: ${cliPath}`);
+            await initNetworkStatusBar(context);
+            await initIdentityStatusBar(context);
+        }
 
         const simulateCommand = vscode.commands.registerCommand(
             'stellarSuite.simulateTransaction',
@@ -74,10 +82,40 @@ export function activate(context: vscode.ExtensionContext) {
 
         const buildCommand = vscode.commands.registerCommand(
             'stellarSuite.buildContract',
-            () => {
-                return buildContract(context, sidebarProvider);
+            (args) => {
+                return buildContract(context, sidebarProvider, args);
             }
         );
+
+        const installCliCommand = vscode.commands.registerCommand(
+            'stellarSuite.installCli',
+            () => {
+                return installCli(context);
+            }
+        );
+
+        const switchNetworkCommand = vscode.commands.registerCommand(
+            'stellarSuite.switchNetwork',
+            () => {
+                return switchNetwork();
+            }
+        );
+
+        const keysGenerateCommand = vscode.commands.registerCommand('stellarSuite.keysGenerate', () => keysGenerate());
+        const keysFundCommand = vscode.commands.registerCommand('stellarSuite.keysFund', () => keysFund());
+        const keysListCommand = vscode.commands.registerCommand('stellarSuite.keysList', () => keysList());
+
+        const generateBindingsCommand = vscode.commands.registerCommand('stellarSuite.generateBindings', (item) => {
+            return generateBindings(item);
+        });
+
+        const runInvokeCommand = vscode.commands.registerCommand('stellarSuite.runInvoke', (args) => {
+            return runInvoke(context, sidebarProvider, args);
+        });
+
+        const contractInfoCommand = vscode.commands.registerCommand('stellarSuite.contractInfo', (args) => {
+            return contractInfo(context, args);
+        });
 
         const watcher = vscode.workspace.createFileSystemWatcher('**/{Cargo.toml,*.wasm}');
         watcher.onDidChange(() => {
@@ -103,6 +141,14 @@ export function activate(context: vscode.ExtensionContext) {
             deployFromSidebarCommand,
             simulateFromSidebarCommand,
             buildCommand,
+            installCliCommand,
+            switchNetworkCommand,
+            keysGenerateCommand,
+            keysFundCommand,
+            keysListCommand,
+            generateBindingsCommand,
+            runInvokeCommand,
+            contractInfoCommand,
             watcher
         );
     } catch (error) {

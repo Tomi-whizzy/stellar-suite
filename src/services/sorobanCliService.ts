@@ -5,8 +5,16 @@ import * as os from 'os';
 import * as path from 'path';
 
 const execFileAsync = promisify(execFile);
-const execAsync = promisify(exec);
+const rawExecAsync = promisify(exec);
 
+export async function execAsync(command: string, options: any = {}): Promise<{stdout: string, stderr: string}> {
+    const env = getEnvironmentWithPath();
+    const result = await rawExecAsync(command, { encoding: 'utf8', env, maxBuffer: 10 * 1024 * 1024, ...options });
+    return {
+        stdout: typeof result.stdout === 'string' ? result.stdout : result.stdout.toString(),
+        stderr: typeof result.stderr === 'string' ? result.stderr : result.stderr.toString()
+    };
+}
 function getEnvironmentWithPath(): NodeJS.ProcessEnv {
     const env = { ...process.env };
     const homeDir = os.homedir();
@@ -34,16 +42,23 @@ export interface SimulationResult {
     resourceUsage?: {
         cpuInstructions?: number;
         memoryBytes?: number;
+        minResourceFee?: string;
     };
+    events?: any[];
+    auth?: any[];
 }
 
 export class SorobanCliService {
     private cliPath: string;
     private source: string;
+    private rpcUrl: string;
+    private networkPassphrase: string;
 
-    constructor(cliPath: string, source: string = 'dev') {
+    constructor(cliPath: string, source: string = 'dev', rpcUrl: string = 'https://soroban-testnet.stellar.org:443', networkPassphrase: string = 'Test SDF Network ; September 2015') {
         this.cliPath = cliPath;
         this.source = source;
+        this.rpcUrl = rpcUrl;
+        this.networkPassphrase = networkPassphrase;
     }
 
     async simulateTransaction(
@@ -59,7 +74,8 @@ export class SorobanCliService {
                 'invoke',
                 '--id', contractId,
                 '--source', this.source,
-                '--network', network,
+                '--rpc-url', this.rpcUrl,
+                '--network-passphrase', this.networkPassphrase,
                 '--'
             ];
 
@@ -156,6 +172,72 @@ export class SorobanCliService {
                 success: false,
                 error: `CLI execution failed: ${errorMessage}`
             };
+        }
+    }
+
+    async buildTransaction(
+        contractId: string,
+        functionName: string,
+        args: any[],
+        network: string = 'testnet'
+    ): Promise<string> {
+        try {
+            const commandParts = [
+                this.cliPath,
+                'contract',
+                'invoke',
+                '--id', contractId,
+                '--source', this.source,
+                '--rpc-url', this.rpcUrl,
+                '--network-passphrase', this.networkPassphrase,
+                '--build-only',
+                '--'
+            ];
+
+            commandParts.push(functionName);
+
+            if (args.length > 0 && typeof args[0] === 'object' && !Array.isArray(args[0])) {
+                const argObj = args[0];
+                for (const [key, value] of Object.entries(argObj)) {
+                    commandParts.push(`--${key}`);
+                    if (typeof value === 'object') {
+                        commandParts.push(JSON.stringify(value));
+                    } else {
+                        commandParts.push(String(value));
+                    }
+                }
+            } else {
+                for (const arg of args) {
+                    if (typeof arg === 'object') {
+                        commandParts.push(JSON.stringify(arg));
+                    } else {
+                        commandParts.push(String(arg));
+                    }
+                }
+            }
+
+            const env = getEnvironmentWithPath();
+            
+            const { stdout, stderr } = await execFileAsync(
+                commandParts[0],
+                commandParts.slice(1),
+                {
+                    env: env,
+                    maxBuffer: 10 * 1024 * 1024,
+                    timeout: 30000
+                }
+            );
+
+            if (stderr && stderr.trim().length > 0) {
+                if (stderr.toLowerCase().includes('error') || stderr.toLowerCase().includes('failed')) {
+                    throw new Error(formatCliError(stderr));
+                }
+            }
+
+            return stdout.trim();
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            throw new Error(`Failed to build transaction XDR: ${errorMessage}`);
         }
     }
 
