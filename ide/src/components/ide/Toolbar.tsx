@@ -26,7 +26,7 @@ export function Toolbar({ onCompile, onDeploy, onTest, isCompiling, network, onN
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors">
             
             <Play className="h-3.5 w-3.5" />
-            {isCompiling ? "Compiling..." : "Compile"}
+            {isCompiling ? "Building..." : "Build"}
           </button>
           <button
             onClick={onDeploy}
@@ -103,7 +103,7 @@ export function Toolbar({ onCompile, onDeploy, onTest, isCompiling, network, onN
           className="flex-1 flex items-center justify-center gap-1 px-2 py-2 text-[11px] font-medium rounded bg-primary text-primary-foreground disabled:opacity-50">
           
             <Play className="h-3 w-3" />
-            {isCompiling ? "..." : "Compile"}
+            {isCompiling ? "..." : "Build"}
           </button>
           <button
           onClick={() => {onDeploy();setMobileMenuOpen(false);}}
