@@ -21,11 +21,14 @@ ide/node_modules/
 ide/dist/
 ide/.env
 ide/.env.local
+ide.md
+bulk.js
 
 # Template build outputs
 extension/templates/*/target/
 extension/templates/*/.soroban/
 extension/templates/*/Cargo.lock
 extension/templates/**/*.wasm
+issues/
 
 docs
