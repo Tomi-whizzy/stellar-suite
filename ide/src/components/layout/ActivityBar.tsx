@@ -6,6 +6,7 @@ import {
   History,
   Search,
   ShieldAlert,
+  FlaskConical,
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
@@ -17,7 +18,8 @@ export type ActivityTab =
   | "deployments"
   | "identities"
   | "search"
-  | "security";
+  | "security"
+  | "testing";
 
 interface ActivityBarProps {
   activeTab: ActivityTab;
@@ -63,6 +65,12 @@ const tabs: ActivityBarTab[] = [
     icon: <ShieldAlert className="h-5 w-5" />,
     label: "Security",
     title: "Security & Clippy",
+  },
+  {
+    id: "testing",
+    icon: <FlaskConical className="h-5 w-5" />,
+    label: "Testing",
+    title: "Proptest Snippets",
   },
 ];
 

@@ -14,8 +14,13 @@ import { FileExplorer } from "@/components/ide/FileExplorer";
 import { IdentitiesView } from "@/components/ide/IdentitiesView";
 import { SearchPane } from "@/components/ide/SearchPane";
 import { SecurityView } from "@/components/ide/SecurityView";
+import { TestingView, TemplatesView } from "@/components/ide/TestingView";
+import { GeneratePropertyTest } from "@/components/Testing/GeneratePropertyTest";
+import { useProptestOutputWatcher } from "@/hooks/useProptestOutputWatcher";
 import { StatusBar } from "@/components/ide/StatusBar";
 import { Terminal } from "@/components/ide/Terminal";
+import { EventsPane } from "@/components/ide/EventsPane";
+import { ProptestView } from "@/components/Panels/ProptestView";
 import { Toolbar } from "@/components/ide/Toolbar";
 import { ActivityBar } from "@/components/layout/ActivityBar";
 import { type NetworkKey } from "@/lib/networkConfig";
@@ -98,6 +103,40 @@ const formatRunTime = () =>
     second: "2-digit",
   });
 
+// ---------------------------------------------------------------------------
+// TestingSidebar — three sub-tabs: Snippets | Templates | Generate
+// ---------------------------------------------------------------------------
+
+function TestingSidebar() {
+  const [tab, setTab] = useState<"snippets" | "templates" | "generate">("snippets");
+  return (
+    <div className="flex h-full flex-col">
+      {/* Sub-tab bar */}
+      <div className="flex shrink-0 border-b border-sidebar-border">
+        {(["snippets", "templates", "generate"] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTab(t)}
+            className={`flex-1 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-colors border-b-2 ${
+              tab === t
+                ? "border-primary text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {t === "snippets" ? "Snippets" : t === "templates" ? "Templates" : "Generate"}
+          </button>
+        ))}
+      </div>
+      <div className="min-h-0 flex-1 overflow-hidden">
+        {tab === "snippets"  && <TestingView />}
+        {tab === "templates" && <TemplatesView />}
+        {tab === "generate"  && <GeneratePropertyTest />}
+      </div>
+    </div>
+  );
+}
+
 export default function Index() {
   const {
     files,
@@ -127,6 +166,8 @@ export default function Index() {
   const { setDiagnostics, clearDiagnostics } = useDiagnosticsStore();
   const { addContract } = useDeployedContractsStore();
 
+  const [bottomTab, setBottomTab] = useState<"console" | "events" | "proptest">("console");
+
   const [invokeState, setInvokeState] = useState<{
     phase: "idle" | "preparing" | "success" | "failed";
     message: string;
@@ -145,6 +186,9 @@ export default function Index() {
   useEffect(() => {
     loadIdentities();
   }, [loadIdentities]);
+
+  // Watch terminal output and drive the proptest store in real time
+  useProptestOutputWatcher();
 
   const contractName = useMemo(
     () => activeTabPath[0] ?? files[0]?.name ?? "hello_world",
@@ -484,6 +528,9 @@ export default function Index() {
                 lastAuditRunAt={lastAuditRunAt}
               />
             ) : null}
+            {leftSidebarTab === "testing" ? (
+              <TestingSidebar />
+            ) : null}
           </aside>
         ) : null}
 
@@ -492,8 +539,43 @@ export default function Index() {
           <div className="min-h-0 flex-1 overflow-hidden">
             <CodeEditor />
           </div>
-          <div className="h-56 shrink-0 border-t border-border">
-            <Terminal />
+          <div className="h-56 shrink-0 border-t border-border flex flex-col">
+            {/* Bottom panel tab bar */}
+            <div
+              className="flex shrink-0 items-center border-b border-border bg-secondary"
+              role="tablist"
+              aria-label="Bottom panel tabs"
+            >
+              {(
+                [
+                  { id: "console",  label: "Console"  },
+                  { id: "events",   label: "Events"   },
+                  { id: "proptest", label: "Proptest" },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={bottomTab === tab.id}
+                  onClick={() => setBottomTab(tab.id)}
+                  className={`px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors border-b-2 ${
+                    bottomTab === tab.id
+                      ? "border-primary text-foreground"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab panels */}
+            <div className="min-h-0 flex-1 overflow-hidden">
+              {bottomTab === "console"  && <Terminal />}
+              {bottomTab === "events"   && <EventsPane />}
+              {bottomTab === "proptest" && <ProptestView />}
+            </div>
           </div>
         </main>
 

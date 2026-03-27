@@ -7,6 +7,7 @@ import React, { Suspense, useEffect, useRef } from "react";
 import { analyzeMathSafety } from "../../lib/mathSafetyAnalyzer";
 import { useMathSafetyStore } from "../../store/useMathSafetyStore";
 import { Breadcrumbs } from "./Breadcrumbs";
+import { getAllMonacoCompletions } from "@/utils/proptestSnippets";
 
 interface CodeEditorProps {
   onCursorChange?: (line: number, col: number) => void;
@@ -179,6 +180,8 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ onCursorChange, onSave }) => {
               insertTextRules:
                 monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             },
+            // Proptest snippets — all categories
+            ...getAllMonacoCompletions(monaco),
           ];
 
           return { suggestions };
