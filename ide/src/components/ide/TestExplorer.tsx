@@ -1,140 +1,282 @@
-import { useState, useEffect } from 'react';
-import { Play, RefreshCw, FileText, CheckCircle2, XCircle, Clock } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { snapshotManager } from '@/lib/testing/snapshotManager';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Beaker, ChevronDown, ChevronRight, FileCode2, FolderTree, Play } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { parseRustTests, type RustDiscoveredTest } from "@/lib/rustTestParser";
 
-interface TestResult {
-  name: string;
+type WorkspaceFile = {
   path: string;
-  status: 'passed' | 'failed' | 'pending' | 'running';
-  duration?: number;
-  error?: string;
-  snapshotMismatch?: boolean;
+  content?: string;
+};
+
+type TreeNode =
+  | {
+      id: string;
+      type: "file" | "module";
+      label: string;
+      children: TreeNode[];
+    }
+  | {
+      id: string;
+      type: "test";
+      label: string;
+      test: RustDiscoveredTest;
+    };
+
+interface TestExplorerProps {
+  files: WorkspaceFile[];
+  onOpenTest?: (test: RustDiscoveredTest) => void;
+  onRunTest?: (test: RustDiscoveredTest) => void;
 }
 
-export function TestExplorer() {
-  const [updateSnapshots, setUpdateSnapshots] = useState(false);
-  const [tests, setTests] = useState<TestResult[]>([]);
-  const [isRunning, setIsRunning] = useState(false);
+function insertTest(tree: TreeNode[], test: RustDiscoveredTest): void {
+  let fileNode = tree.find(
+    (node): node is Extract<TreeNode, { type: "file" }> =>
+      node.type === "file" && node.label === test.filePath
+  );
 
-  useEffect(() => {
-    // Update snapshot manager when toggle changes
-    snapshotManager.setUpdateMode(updateSnapshots);
-  }, [updateSnapshots]);
+  if (!fileNode) {
+    fileNode = {
+      id: `file:${test.filePath}`,
+      type: "file",
+      label: test.filePath,
+      children: [],
+    };
+    tree.push(fileNode);
+  }
 
-  const handleRunTests = async () => {
-    setIsRunning(true);
-    // This would integrate with the actual test runner
-    // For now, it's a placeholder for the integration point
-    setTimeout(() => {
-      setIsRunning(false);
-    }, 1000);
-  };
+  let cursor = fileNode.children;
 
-  const getStatusIcon = (status: TestResult['status']) => {
-    switch (status) {
-      case 'passed':
-        return <CheckCircle2 className="h-4 w-4 text-green-500" />;
-      case 'failed':
-        return <XCircle className="h-4 w-4 text-red-500" />;
-      case 'running':
-        return <Clock className="h-4 w-4 text-blue-500 animate-spin" />;
-      default:
-        return <Clock className="h-4 w-4 text-gray-400" />;
+  for (const mod of test.modulePath) {
+    let modNode = cursor.find(
+      (node): node is Extract<TreeNode, { type: "module" }> =>
+        node.type === "module" && node.label === mod
+    );
+
+    if (!modNode) {
+      modNode = {
+        id: `${fileNode.id}:mod:${test.modulePath.join("::")}:${mod}`,
+        type: "module",
+        label: mod,
+        children: [],
+      };
+      cursor.push(modNode);
     }
-  };
+
+    cursor = modNode.children;
+  }
+
+  cursor.push({
+    id: test.id,
+    type: "test",
+    label: test.testName,
+    test,
+  });
+}
+
+function buildTree(files: WorkspaceFile[]): TreeNode[] {
+  const tree: TreeNode[] = [];
+
+  for (const file of files) {
+    if (!file.path.endsWith(".rs") || !file.content) continue;
+    const tests = parseRustTests(file.path, file.content);
+    for (const test of tests) {
+      insertTest(tree, test);
+    }
+  }
+
+  return tree.sort((a, b) => a.label.localeCompare(b.label));
+}
+
+function countTests(nodes: TreeNode[]): number {
+  return nodes.reduce((acc, node) => {
+    if (node.type === "test") return acc + 1;
+    return acc + countTests(node.children);
+  }, 0);
+}
+
+function collectBranchIds(nodes: TreeNode[]): string[] {
+  const ids: string[] = [];
+
+  for (const node of nodes) {
+    if (node.type !== "test") {
+      ids.push(node.id);
+      ids.push(...collectBranchIds(node.children));
+    }
+  }
+
+  return ids;
+}
+
+function TreeRow({
+  node,
+  depth,
+  expanded,
+  toggle,
+  onOpenTest,
+  onRunTest,
+}: {
+  node: TreeNode;
+  depth: number;
+  expanded: Set<string>;
+  toggle: (id: string) => void;
+  onOpenTest?: (test: RustDiscoveredTest) => void;
+  onRunTest?: (test: RustDiscoveredTest) => void;
+}) {
+  const isBranch = node.type !== "test";
+  const isOpen = expanded.has(node.id);
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader>
-        <CardTitle>Test Explorer</CardTitle>
-        <CardDescription>Run and manage your tests</CardDescription>
-      </CardHeader>
-      <CardContent className="flex-1 flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Switch
-              id="update-snapshots"
-              checked={updateSnapshots}
-              onCheckedChange={setUpdateSnapshots}
-            />
-            <Label htmlFor="update-snapshots" className="cursor-pointer">
-              Update Snapshots
-            </Label>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleRunTests}
-              disabled={isRunning}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isRunning ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleRunTests}
-              disabled={isRunning}
-            >
-              <Play className="h-4 w-4 mr-2" />
-              Run All
-            </Button>
-          </div>
-        </div>
+    <div>
+      <div
+        className="group flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent/50"
+        style={{ paddingLeft: `${8 + depth * 14}px` }}
+      >
+        {isBranch ? (
+          <button
+            type="button"
+            onClick={() => toggle(node.id)}
+            className="flex h-4 w-4 items-center justify-center"
+            aria-label={isOpen ? "Collapse" : "Expand"}
+            aria-expanded={isOpen}
+          >
+            {isOpen ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+          </button>
+        ) : (
+          <span className="inline-block h-4 w-4" />
+        )}
 
-        {updateSnapshots && (
-          <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-md p-3 text-sm">
-            <p className="text-amber-800 dark:text-amber-200">
-              Snapshot update mode is enabled. All snapshots will be updated on the next test run.
-            </p>
+        {node.type === "file" && (
+          <FileCode2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+        )}
+        {node.type === "module" && (
+          <FolderTree className="h-4 w-4 shrink-0 text-muted-foreground" />
+        )}
+        {node.type === "test" && (
+          <Beaker className="h-4 w-4 shrink-0 text-muted-foreground" />
+        )}
+
+        {node.type === "test" ? (
+          <button
+            type="button"
+            className="min-w-0 flex-1 truncate text-left"
+            onClick={() => onOpenTest?.(node.test)}
+            title={`${node.test.filePath}:${node.test.line}`}
+          >
+            {node.label}
+          </button>
+        ) : (
+          <div className="min-w-0 flex-1 truncate" title={node.label}>
+            {node.label}
           </div>
         )}
 
-        <ScrollArea className="flex-1">
-          <div className="space-y-2">
-            {tests.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p>No tests found</p>
-                <p className="text-xs mt-1">Run tests to see results here</p>
-              </div>
-            ) : (
-              tests.map((test, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 border rounded-md hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    {getStatusIcon(test.status)}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{test.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{test.path}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {test.duration && (
-                      <span className="text-xs text-muted-foreground">
-                        {test.duration}ms
-                      </span>
-                    )}
-                    {test.snapshotMismatch && (
-                      <Badge variant="outline" className="text-xs">
-                        Snapshot
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </ScrollArea>
-      </CardContent>
-    </Card>
+        {node.type === "test" && (
+          <button
+            type="button"
+            className="opacity-0 transition-opacity group-hover:opacity-100"
+            onClick={() => onRunTest?.(node.test)}
+            title="Run test"
+            aria-label={`Run ${node.test.testName}`}
+          >
+            <Play className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
+      {isBranch && isOpen && (
+        <div>
+          {node.children
+            .slice()
+            .sort((a, b) => {
+              if (a.type === "test" && b.type !== "test") return 1;
+              if (a.type !== "test" && b.type === "test") return -1;
+              return a.label.localeCompare(b.label);
+            })
+            .map((child) => (
+              <TreeRow
+                key={child.id}
+                node={child}
+                depth={depth + 1}
+                expanded={expanded}
+                toggle={toggle}
+                onOpenTest={onOpenTest}
+                onRunTest={onRunTest}
+              />
+            ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function TestExplorer({
+  files,
+  onOpenTest,
+  onRunTest,
+}: TestExplorerProps) {
+  const tree = useMemo(() => buildTree(files), [files]);
+  const total = useMemo(() => countTests(tree), [tree]);
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    const branchIds = collectBranchIds(tree);
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      for (const id of branchIds) {
+        if (!prev.has(id)) {
+          next.add(id);
+        }
+      }
+      return next;
+    });
+  }, [tree]);
+
+  const toggle = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="border-b px-3 py-2">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-semibold">Test Explorer</div>
+          <Beaker className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {total} discovered {total === 1 ? "test" : "tests"}
+        </div>
+      </div>
+
+      <ScrollArea className="flex-1">
+        <div className="p-2">
+          {tree.length === 0 ? (
+            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+              No Rust tests found in the workspace.
+            </div>
+          ) : (
+            tree.map((node) => (
+              <TreeRow
+                key={node.id}
+                node={node}
+                depth={0}
+                expanded={expanded}
+                toggle={toggle}
+                onOpenTest={onOpenTest}
+                onRunTest={onRunTest}
+              />
+            ))
+          )}
+        </div>
+      </ScrollArea>
+    </div>
   );
 }
