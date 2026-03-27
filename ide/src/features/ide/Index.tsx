@@ -14,6 +14,7 @@ import { FileExplorer } from "@/components/ide/FileExplorer";
 import { IdentitiesView } from "@/components/ide/IdentitiesView";
 import { SearchPane } from "@/components/ide/SearchPane";
 import { SecurityView } from "@/components/ide/SecurityView";
+import { EventsPane } from "@/components/ide/EventsPane";
 import { StatusBar } from "@/components/ide/StatusBar";
 import { Terminal } from "@/components/ide/Terminal";
 import { Toolbar } from "@/components/ide/Toolbar";
@@ -127,7 +128,7 @@ export default function Index() {
   const { setDiagnostics, clearDiagnostics } = useDiagnosticsStore();
   const { addContract } = useDeployedContractsStore();
 
-  const [invokeState, setInvokeState] = useState<{
+  const [bottomTab, setBottomTab] = useState<"console" | "events">("console");
     phase: "idle" | "preparing" | "success" | "failed";
     message: string;
   }>({ phase: "idle", message: "Invoke" });
@@ -492,8 +493,45 @@ export default function Index() {
           <div className="min-h-0 flex-1 overflow-hidden">
             <CodeEditor />
           </div>
-          <div className="h-56 shrink-0 border-t border-border">
-            <Terminal />
+          <div className="h-56 shrink-0 border-t border-border flex flex-col">
+            {/* Bottom panel tab bar */}
+            <div className="flex shrink-0 items-center border-b border-border bg-secondary px-1">
+              <button
+                type="button"
+                onClick={() => setBottomTab("console")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors border-b-2 ${
+                  bottomTab === "console"
+                    ? "border-primary text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+                aria-selected={bottomTab === "console"}
+                role="tab"
+              >
+                Console
+              </button>
+              <button
+                type="button"
+                onClick={() => setBottomTab("events")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors border-b-2 ${
+                  bottomTab === "events"
+                    ? "border-primary text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+                aria-selected={bottomTab === "events"}
+                role="tab"
+              >
+                Events
+              </button>
+            </div>
+
+            {/* Tab panels */}
+            <div className="min-h-0 flex-1 overflow-hidden">
+              {bottomTab === "console" ? (
+                <Terminal />
+              ) : (
+                <EventsPane />
+              )}
+            </div>
           </div>
         </main>
 
