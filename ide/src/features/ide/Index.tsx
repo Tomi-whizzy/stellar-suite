@@ -20,6 +20,7 @@ import { SecurityView } from "@/components/ide/SecurityView";
 import { TestingView, TemplatesView } from "@/components/ide/TestingView";
 import { GeneratePropertyTest } from "@/components/Testing/GeneratePropertyTest";
 import { useProptestOutputWatcher } from "@/hooks/useProptestOutputWatcher";
+import { EventsPane } from "@/components/ide/EventsPane";
 import { StatusBar } from "@/components/ide/StatusBar";
 import { Terminal } from "@/components/ide/Terminal";
 import TestExplorer from "@/components/ide/TestExplorer";
@@ -32,6 +33,7 @@ import { useDeployedContractsStore } from "@/store/useDeployedContractsStore";
 import { useDiagnosticsStore } from "@/store/useDiagnosticsStore";
 import { useIdentityStore } from "@/store/useIdentityStore";
 import { useWorkspaceStore, flattenWorkspaceFiles } from "@/store/workspaceStore";
+import { useVCSStore } from "@/store/vcsStore";
 import { parseCargoAuditOutput } from "@/utils/cargoAuditParser";
 import { parseMixedOutput } from "@/utils/cargoParser";
 import { parseClippyOutput, type ClippyLint } from "@/utils/clippyParser";
@@ -151,6 +153,7 @@ export default function Index() {
     showExplorer,
     showPanel,
     leftSidebarTab,
+    hydrationComplete,
     setIsCompiling,
     setBuildState,
     setContractId,
@@ -169,6 +172,8 @@ export default function Index() {
   } = useWorkspaceStore();
 
   const { activeContext, activeIdentity, loadIdentities } = useIdentityStore();
+  const { localRepoInitialized, hydrateLocalRepo, refreshLocalStatuses } =
+    useVCSStore();
   const { setDiagnostics, clearDiagnostics } = useDiagnosticsStore();
   const { addContract } = useDeployedContractsStore();
 
@@ -195,6 +200,27 @@ export default function Index() {
 
   // Watch terminal output and drive the proptest store in real time
   useProptestOutputWatcher();
+  useEffect(() => {
+    if (!hydrationComplete) {
+      return;
+    }
+
+    void hydrateLocalRepo(flattenWorkspaceFiles(files));
+  }, [files, hydrateLocalRepo, hydrationComplete]);
+
+  useEffect(() => {
+    if (!hydrationComplete || !localRepoInitialized) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void refreshLocalStatuses(
+        flattenWorkspaceFiles(useWorkspaceStore.getState().files),
+      );
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, [hydrationComplete, localRepoInitialized, refreshLocalStatuses]);
 
   const contractName = useMemo(
     () => activeTabPath[0] ?? files[0]?.name ?? "hello_world",
