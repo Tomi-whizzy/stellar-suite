@@ -8,7 +8,7 @@ import { ContractPanel } from "@/components/ide/ContractPanel";
 import { DeploymentsView } from "@/components/ide/DeploymentsView";
 import { GitPane } from "@/components/ide/GitPane";
 import { DiffEditorPane } from "@/components/editor/DiffEditorPane";
-import { EditorTabs } from "@/components/ide/EditorTabs";
+// import { EditorTabs } from "@/components/ide/EditorTabs";
 import { FileExplorer } from "@/components/ide/FileExplorer";
 import { IdentitiesView } from "@/components/ide/IdentitiesView";
 import { OracleAssistant } from "@/components/ide/OracleAssistant";
@@ -16,11 +16,11 @@ import { SearchPane } from "@/components/ide/SearchPane";
 import { SecurityView } from "@/components/ide/SecurityView";
 import { StatusBar } from "@/components/ide/StatusBar";
 import { Terminal } from "@/components/ide/Terminal";
-import TestExplorer from "@/components/ide/TestExplorer";
+// import TestExplorer from "@/components/ide/TestExplorer";
 import XdrInspector from "@/components/tools/XdrInspector";
-import { Toolbar } from "@/components/ide/Toolbar";
+// import { Toolbar } from "@/components/ide/Toolbar";
 import { OutlineView } from "@/components/sidebar/OutlineView";
-import { ActivityBar } from "@/components/layout/ActivityBar";
+// import { ActivityBar } from "@/components/layout/ActivityBar";
 import { type NetworkKey } from "@/lib/networkConfig";
 import { type FileNode } from "@/lib/sample-contracts";
 import { useDeployedContractsStore } from "@/store/useDeployedContractsStore";
@@ -475,7 +475,7 @@ export default function Index() {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
-      <Toolbar
+      {/* <Toolbar
         onCompile={handleCompile}
         onDeploy={handleDeploy}
         onTest={handleTest}
@@ -487,10 +487,10 @@ export default function Index() {
         isRunningClippy={isRunningClippy}
         onRunAudit={handleRunAudit}
         isRunningAudit={isRunningAudit}
-      />
+      /> */}
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <ActivityBar
+        {/* <ActivityBar
           activeTab={leftSidebarTab}
           onTabChange={(tab) => {
             if (leftSidebarTab === tab && showExplorer) {
@@ -503,7 +503,7 @@ export default function Index() {
           }}
           sidebarVisible={showExplorer}
           onToggleSidebar={() => setShowExplorer(!showExplorer)}
-        />
+        /> */}
 
         {showExplorer ? (
           <aside className="hidden w-72 shrink-0 border-r border-border bg-sidebar md:block">
@@ -552,6 +552,7 @@ export default function Index() {
                 </div>
               </div>
             ) : null}
+            {/*
             {leftSidebarTab === "tests" ? (
               <TestExplorer
                 files={flattenWorkspaceFiles(files)}
@@ -574,12 +575,13 @@ export default function Index() {
                 }}
               />
             ) : null}
+            */}
             {leftSidebarTab === "git" ? <GitPane /> : null}
           </aside>
         ) : null}
 
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <EditorTabs />
+          {/* <EditorTabs /> */}
           <div className="min-h-0 flex-1 overflow-hidden">
             {diffViewPath ? (
               <DiffEditorPane

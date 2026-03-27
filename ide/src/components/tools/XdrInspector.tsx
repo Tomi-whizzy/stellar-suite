@@ -10,6 +10,35 @@ type DecodedState = {
   value: xdr.TransactionEnvelope | xdr.LedgerEntry | xdr.ScVal;
 };
 
+function serializeScVal(value: xdr.ScVal) {
+  const kind = value.switch().name;
+
+  if (kind === "scvBool") {
+    return { kind, value: value.b() };
+  }
+
+  if (kind === "scvU32") {
+    return { kind, value: value.u32() };
+  }
+
+  if (kind === "scvI32") {
+    return { kind, value: value.i32() };
+  }
+
+  if (kind === "scvString") {
+    return { kind, value: value.str().toString() };
+  }
+
+  if (kind === "scvSymbol") {
+    return { kind, value: value.sym().toString() };
+  }
+
+  return {
+    kind,
+    xdrBase64: value.toXDR("base64"),
+  };
+}
+
 function safeStringify(value: unknown): string {
   return JSON.stringify(
     value,
@@ -24,15 +53,14 @@ function safeStringify(value: unknown): string {
 }
 
 function asJsonLike(value: DecodedState["value"]) {
-  try {
-    // xdr classes expose toXDR and often serialize to plain JSON via inspection.
-    return {
-      xdrBase64: value.toXDR("base64"),
-      details: value,
-    };
-  } catch {
-    return { details: value };
+  if (value instanceof xdr.ScVal) {
+    return serializeScVal(value);
   }
+
+  return {
+    xdrBase64: value.toXDR("base64"),
+    type: "xdr-object",
+  };
 }
 
 function decodeXdr(base64: string): DecodedState {
@@ -74,7 +102,10 @@ export default function XdrInspector() {
 
   const decodedJson = useMemo(() => {
     if (!decoded) return "";
-    return safeStringify({ type: decoded.type, ...asJsonLike(decoded.value) });
+    return safeStringify({
+      decodedType: decoded.type,
+      decoded: asJsonLike(decoded.value),
+    });
   }, [decoded]);
 
   const handleDecode = () => {
@@ -94,7 +125,7 @@ export default function XdrInspector() {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to decode XDR.";
-      setErrorMessage(message);
+      setErrorMessage(`Decode failed: ${message}`);
       setDecoded(null);
       setEncodedBase64("");
     }
