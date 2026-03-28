@@ -4,10 +4,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   PanelRightClose,
   PanelRightOpen,
+  Binary,
+  Activity,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import CodeEditor from "@/components/ide/CodeEditor";
+import { BinaryDiffTool } from "@/features/ide/BinaryDiffTool";
 import { ContractPanel } from "@/components/ide/ContractPanel";
 import { DeploymentStepper } from "@/components/ide/DeploymentStepper";
 import { DeploymentsView } from "@/components/ide/DeploymentsView";
@@ -799,6 +802,23 @@ export default function Index() {
             */}
             {leftSidebarTab === "git" ? <GitPane /> : null}
             {leftSidebarTab === "references" ? <ReferencesPane /> : null}
+            {leftSidebarTab === "binary-diff" ? (
+              <div className="flex flex-col h-full bg-sidebar p-4 space-y-4">
+                <div className="flex items-center gap-2 text-primary font-bold text-[10px] uppercase tracking-wider">
+                  <Binary className="h-4 w-4" />
+                  <span>Binary Auditing</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-relaxed italic">
+                  Compare compiled WASM binaries side-by-side to audit changes in public symbols and byte-level logic.
+                </p>
+                <div className="p-3 bg-muted/50 rounded-lg border border-border">
+                  <h4 className="text-[10px] font-bold uppercase mb-1.5 flex items-center gap-1.5">
+                    <Activity className="h-3 w-3" /> Quick Tip
+                  </h4>
+                  <p className="text-[10px] text-muted-foreground">Select two builds in the main area to analyze the delta between them.</p>
+                </div>
+              </div>
+            ) : null}
             {leftSidebarTab === "inspector" ? <InspectorPane /> : null}
           </aside>
         ) : null}
@@ -806,7 +826,9 @@ export default function Index() {
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
           {/* <EditorTabs /> */}
           <div className="min-h-0 flex-1 overflow-hidden">
-            {diffViewPath ? (
+            {leftSidebarTab === "binary-diff" ? (
+              <BinaryDiffTool />
+            ) : diffViewPath ? (
               <DiffEditorPane
                 path={diffViewPath}
                 currentContent={activeFileContext?.content ?? ""}

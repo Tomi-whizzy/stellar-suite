@@ -13,6 +13,7 @@ import {
   Settings,
   ListTree,
   Library,
+  Binary,
 } from "lucide-react";
 import { ReactNode } from "react";
 
@@ -26,6 +27,8 @@ export type ActivityTab =
   | "tests"
   | "outline"
   | "references";
+  | "binary-diff"
+  | "oracle";
 
 interface ActivityBarProps {
   activeTab: ActivityTab;
@@ -77,6 +80,12 @@ const tabs: ActivityBarTab[] = [
     icon: <ListTree className="h-5 w-5" />,
     label: "Outline",
     title: "Symbol Outline",
+  },
+  {
+    id: "binary-diff",
+    icon: <Binary className="h-5 w-5" />,
+    label: "Binary Diff",
+    title: "WASM Binary Diffing Tool",
   },
   {
     id: "security",
