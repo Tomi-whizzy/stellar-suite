@@ -82,6 +82,7 @@ import {
   createStreamProcessor,
   readCompileResponse,
 } from "@/utils/compileStream";
+import { useTranslation } from "react-i18next";
 import {
   createStructuredTestOutputFromCargoRun,
   createSimulatedCargoTestOutput,
@@ -171,23 +172,24 @@ const formatRunTime = () =>
 // ---------------------------------------------------------------------------
 
 function TestingSidebar() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<"snippets" | "templates" | "generate">("snippets");
   return (
     <div className="flex h-full flex-col">
       {/* Sub-tab bar */}
       <div className="flex shrink-0 border-b border-sidebar-border">
-        {(["snippets", "templates", "generate"] as const).map((t) => (
+        {(["snippets", "templates", "generate"] as const).map((tValue) => (
           <button
-            key={t}
+            key={tValue}
             type="button"
-            onClick={() => setTab(t)}
+            onClick={() => setTab(tValue)}
             className={`flex-1 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-colors border-b-2 ${
-              tab === t
+              tab === tValue
                 ? "border-primary text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            {t === "snippets" ? "Snippets" : t === "templates" ? "Templates" : "Generate"}
+            {tValue === "snippets" ? "Snippets" : tValue === "templates" ? "Templates" : "Generate"}
           </button>
         ))}
       </div>
@@ -201,6 +203,7 @@ function TestingSidebar() {
 }
 
 export default function Index() {
+  const { t } = useTranslation();
   const {
     files,
     activeTabPath,
@@ -370,11 +373,16 @@ export default function Index() {
   );
 
   const handleCompile = useCallback(async () => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      toast.error(t('network.offline_warning', 'Cannot perform network actions while offline.'));
+      return;
+    }
+
     setIsCompiling(true);
     setBuildState("building");
     clearDiagnostics();
     setTerminalExpanded(true);
-    appendTerminalOutput("> Compiling contract...\r\n");
+    appendTerminalOutput(`> ${t('network.build', 'Compiling contract')}...\r\n`);
     appendTerminalOutput(`Target network: ${network}\r\n`);
 
     const processor = createStreamProcessor({
@@ -399,7 +407,7 @@ export default function Index() {
         );
       }
 
-      appendTerminalOutput("✓ Compilation finished.\r\n");
+      appendTerminalOutput(`✓ ${t('general.success', 'Compilation finished')}.\r\n`);
       setBuildState("success");
       addAuditLog({
         category: "build",
@@ -439,6 +447,7 @@ export default function Index() {
     setDiagnostics,
     setIsCompiling,
     setTerminalExpanded,
+    t,
   ]);
 
   const handleRunClippy = useCallback(async () => {
@@ -686,6 +695,11 @@ export default function Index() {
    *   Phase 2 — createContract         → contractId (C...)
    */
   const handleDeploy = useCallback(async () => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      toast.error(t('network.offline_warning', 'Cannot perform network actions while offline.'));
+      return;
+    }
+
     setDeployedContractId(null);
     openDeployModal();
     setDeploymentStep("simulating");
@@ -697,7 +711,7 @@ export default function Index() {
     try {
       // ── Phase 1: compile + upload WASM ──────────────────────────────────
       setDeploymentStep("uploading");
-      appendTerminalOutput("> Compiling and uploading WASM…\r\n");
+      appendTerminalOutput(`> ${t('network.deploy', 'Compiling and uploading WASM')}…\r\n`);
 
       const response = await fetch(COMPILE_API_URL, {
         method: "POST",
