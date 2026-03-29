@@ -4,6 +4,7 @@ import { ReactNode } from "react";
 import { Toolbar } from "@/components/ide/Toolbar";
 import { ActivityBar, type ActivityTab } from "@/components/layout/ActivityBar";
 import { type NetworkKey } from "@/lib/networkConfig";
+import NotificationCenter from "@/components/notifications/NotificationCenter";
 
 type BuildState = "idle" | "building" | "success" | "error";
 
@@ -53,16 +54,22 @@ export function IdeShell({
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden bg-background">
       {/* Top Menu Bar */}
-      <Toolbar
-        onCompile={onCompile}
-        onDeploy={onDeploy}
-        onTest={onTest}
-        isCompiling={isCompiling}
-        buildState={buildState}
-        network={network}
-        onNetworkChange={onNetworkChange}
-        saveStatus={saveStatus}
-      />
+      <div className="relative">
+        <Toolbar
+          onCompile={onCompile}
+          onDeploy={onDeploy}
+          onTest={onTest}
+          isCompiling={isCompiling}
+          buildState={buildState}
+          network={network}
+          onNetworkChange={onNetworkChange}
+          saveStatus={saveStatus}
+        />
+
+        <div className="absolute right-4 top-1/2 z-20 -translate-y-1/2">
+          <NotificationCenter />
+        </div>
+      </div>
 
       {/* Main Content Area: Activity Bar + Sidebar + Editor */}
       <div className="flex-1 flex overflow-hidden">
@@ -75,9 +82,7 @@ export function IdeShell({
         />
 
         {/* Main Content */}
-        <div className="flex-1 flex overflow-hidden">
-          {children}
-        </div>
+        <div className="flex-1 flex overflow-hidden">{children}</div>
       </div>
     </div>
   );
