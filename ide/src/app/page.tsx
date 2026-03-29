@@ -8,7 +8,6 @@ import { SettingsModal } from "@/components/ide/SettingsModal";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import XdrInspector from "@/components/tools/XdrInspector";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
@@ -86,7 +85,6 @@ export default function HomePage() {
           <Toaster />
           <Sonner />
           <MobileGatekeeper />
-          <XdrInspector />
           <Index />
           <QuickOpen />
           <CommandPalette

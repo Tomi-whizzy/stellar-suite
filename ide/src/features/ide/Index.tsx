@@ -1020,7 +1020,7 @@ export default function Index() {
               <CodeEditor />
             )}
           </div>
-          <div className="h-56 shrink-0 border-t border-border flex flex-col">
+          <div className="h-32 md:h-56 shrink-0 border-t border-border flex flex-col">
             {/* Bottom panel tab bar */}
             <div
               className="flex shrink-0 items-center border-b border-border bg-secondary"
@@ -1105,9 +1105,7 @@ export default function Index() {
         </aside>
       </div>
 
-      <div className="hidden md:block">
-        <StatusBar language={activeFileContext?.language} />
-      </div>
+      <StatusBar language={activeFileContext?.language} />
 
       <StarterProjectWizard open={wizardOpen} onOpenChange={setWizardOpen} />
 
