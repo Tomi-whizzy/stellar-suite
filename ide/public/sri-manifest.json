@@ -1,0 +1,8 @@
+{
+  "generated": "2026-04-23T10:16:18.069Z",
+  "algorithm": "sha384",
+  "assets": {
+    "/workers/compile.worker.js": "sha384-8lA/RqADmaMFkngx3RJMJ+RplYG61czHHiKr4RL8pXEq0jot7Z7gnJTpPG+RG+/t",
+    "/workers/local-compiler.worker.js": "sha384-kjOvRmxz3OfwJur16sOtpaPDSRmYJDTqI2I32Hex0DX2ClEs/xUYcB6qFUcSiyi+"
+  }
+}
