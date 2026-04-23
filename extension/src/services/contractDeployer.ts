@@ -23,9 +23,6 @@ const additionalPath = [
         cargoBin,
         path.join(homeDir, '.local', 'bin'),
         '/usr/local/bin',
-        '/opt/homebrew/bin',
-        '/opt/homebrew/sbin'
-    ];
 
     const currentPath = env.PATH || env.Path || '';
     env.PATH = [...additionalPath, currentPath].filter(Boolean).join(path.delimiter);
